@@ -1,6 +1,6 @@
-import { GsapSetup } from "./utils/gsapConfig";
-import { heroSectionInit } from "./modules/heroSection";
-import { getViewportName, checkMotionReduce } from "./utils/helpers";
+import { GsapSetup } from "./utils/gsapConfig.js";
+import { heroSectionInit } from "./modules/heroSection.js";
+import { getViewportName, checkMotionReduce } from "./utils/helpers.js";
 
 function initPage() {
   const viewportName = getViewportName();

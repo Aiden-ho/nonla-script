@@ -1,4 +1,4 @@
-import { BREAKPOINT } from "./constant";
+import { BREAKPOINT } from "./constant.js";
 
 const viewportRules = [
   { name: BREAKPOINT.MOBILE, condition: (width) => width >= 375 },
