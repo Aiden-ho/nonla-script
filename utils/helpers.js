@@ -1,10 +1,10 @@
 import { BREAKPOINT } from "./constant.js";
 
 const viewportRules = [
-  { name: BREAKPOINT.MOBILE, condition: (width) => width >= 375 },
-  { name: BREAKPOINT.TABLET, condition: (width) => width >= 768 },
-  { name: BREAKPOINT.SMALL_DESKTOP, condition: (width) => width >= 1440 },
-  { name: BREAKPOINT.LARGE_DESKTOP, condition: (width) => width >= 1920 },
+  { name: BREAKPOINT.MOBILE, condition: (width) => width <= 475 },
+  { name: BREAKPOINT.TABLET, condition: (width) => width <= 768 },
+  { name: BREAKPOINT.SMALL_DESKTOP, condition: (width) => width <= 1440 },
+  { name: BREAKPOINT.LARGE_DESKTOP, condition: (width) => width <= 1920 },
 ];
 
 export function getViewportName() {
