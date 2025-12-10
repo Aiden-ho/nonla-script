@@ -1,6 +1,8 @@
 import { BREAKPOINT } from "../utils/constant.js";
 
-function createHeroIntroAnimation({
+// Make animation functions
+
+function createSlittingHeroAnimation({
   duration = 0.5,
   ease = "power1.out",
   start = "top top",
@@ -11,7 +13,7 @@ function createHeroIntroAnimation({
   const heroSection = document.querySelector('[data-section="hero"]');
   const triggerSlitting = document.querySelector('[data-trigger="slit"]');
 
-  if (!introSection || !heroSection || !topSection) return;
+  if (!introSection || !heroSection || !triggerSlitting) return;
 
   return gsap.to(introSection, {
     clipPath: "polygon(0% 0%, 0% 100%, 100% 100%, 100% 0% )",
@@ -29,7 +31,7 @@ function createHeroIntroAnimation({
   });
 }
 
-function applyReducedMotionHeroIntro() {
+function applyReducedMotionSlittingHero() {
   const introSection = document.querySelector('[data-section="intro"]');
   const heroSection = document.querySelector('[data-section="hero"]');
   const triggerSlitting = document.querySelector('[data-trigger="slit"]');
@@ -50,12 +52,14 @@ function applyReducedMotionHeroIntro() {
   });
 }
 
+// Strategies functions
+
 function mobileConfig() {
-  createHeroIntroAnimation({ duration: 0.2 });
+  createSlittingHeroAnimation({ duration: 0.3, scrub: 0.3, end: "+=60%" });
 }
 
 function desktopConfig() {
-  createHeroIntroAnimation();
+  createSlittingHeroAnimation();
 }
 
 const AnimationStrategies = {
@@ -65,11 +69,13 @@ const AnimationStrategies = {
   [BREAKPOINT.LARGE_DESKTOP]: desktopConfig,
 };
 
-export function SlittingHeroSectionInit(context) {
+// main function
+
+export function slittingHeroSectionInit(context) {
   const { viewportName, isMotionReduced } = context;
 
   if (isMotionReduced) {
-    applyReducedMotionHeroIntro();
+    applyReducedMotionSlittingHero();
     return;
   }
 
