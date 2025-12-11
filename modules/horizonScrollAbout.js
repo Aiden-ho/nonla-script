@@ -27,7 +27,7 @@ function getScrollAmount(direc, wrapper, tracker) {
 // Make animation functions
 function createSlideScrollAnimation({
   direc = DIRECTION.HORIZON,
-  scrub = 2,
+  scrub = 1,
   ease = "none",
 } = {}) {
   const els = getSlideScrollElements();
@@ -47,6 +47,7 @@ function createSlideScrollAnimation({
       start: "top top",
       end: () => `+=${getScrollAmount(direc, wrapper, tracker) * -1}`,
       pin: true,
+      pinSpacing: true,
       scrub,
     },
   });
@@ -63,43 +64,6 @@ function createSlideScrollAnimation({
       },
       "<"
     );
-}
-
-function applyReducedMotionHorizonScroll({ direc = DIRECTION.VERTICAL }) {
-  const els = getSlideScrollElements();
-  if (!els) return;
-
-  const { tracker, wrapper, progress_value } = els;
-
-  const isHorizon = direc === DIRECTION.HORIZON;
-  const axis = isHorizon ? "x" : "y";
-
-  function getScrollAmount() {
-    let wrapperSize = isHorizon ? wrapper.clientWidth : wrapper.clientHeight;
-    let trackSize = isHorizon ? tracker.scrollWidth : tracker.scrollHeight;
-    return -(trackSize - wrapperSize);
-  }
-
-  ScrollTrigger.create({
-    trigger: wrapper,
-    start: "top top",
-    end: () => `+=${getScrollAmount(direc, wrapper, tracker) * -1}`,
-    pin: true,
-    scrub: true,
-    onUpdate: ({ progress }) => {
-      const amount = getScrollAmount(direc, wrapper, tracker);
-
-      gsap.set(tracker, {
-        [axis]: amount * progress,
-      });
-
-      // progress bar scale theo progress
-      gsap.set(progress_value, {
-        scaleX: progress,
-        transformOrigin: "center left",
-      });
-    },
-  });
 }
 
 // Strategies functions
@@ -121,10 +85,7 @@ const AnimationStrategies = {
 export function horizonScrollAbout(context) {
   const { viewportName, isMotionReduced } = context;
 
-  if (isMotionReduced) {
-    applyReducedMotionHorizonScroll();
-    return;
-  }
+  //isMotionReduced for next update
 
   const animaiton = AnimationStrategies[viewportName]();
   if (!animaiton) return;
