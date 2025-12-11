@@ -8,8 +8,8 @@ const viewportRules = [
 ];
 
 export function getViewportName() {
-  const screenWidth = window.innerWidth;
-
+  const screenWidth = document.documentElement.clientWidth;
+  console.log(screenWidth);
   const viewport = viewportRules.find((rule) => rule.condition(screenWidth));
 
   return viewport ? viewport.name : BREAKPOINT.SMALL_DESKTOP;
