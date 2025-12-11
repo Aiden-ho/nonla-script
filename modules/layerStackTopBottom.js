@@ -32,27 +32,6 @@ function createLayerStackAnimation({
   });
 }
 
-function applyReducedMotionLayerStack() {
-  const topLayer = document.querySelector('[data-layer="top"]');
-  const bottomLayer = document.querySelector('[data-layer="bottom"]');
-
-  if (!topLayer || !bottomLayer) return;
-
-  return ScrollTrigger.create({
-    trigger: ".about_section",
-    start: bottomLayer,
-    once: true,
-    onEnter: () => {
-      gsap.to(topLayer, {
-        duration: 0.2,
-        ease: "power1.out",
-        filter: "brightness(80%)",
-        scale: 0.98,
-      });
-    },
-  });
-}
-
 // Strategies functions
 function mobileConfig() {
   createLayerStackAnimation({
@@ -75,10 +54,7 @@ const AnimationStrategies = {
 export function layerStackTopBottom(context) {
   const { viewportName, isMotionReduced } = context;
 
-  if (isMotionReduced) {
-    applyReducedMotionLayerStack();
-    return;
-  }
+  //isMotionReduced for next update
 
   const animaiton = AnimationStrategies[viewportName]();
   if (!animaiton) return;
