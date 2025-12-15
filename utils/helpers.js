@@ -1,21 +1,50 @@
-import { BREAKPOINT } from "./constant.js";
+import { BREAKPOINT, VIEWPORTRULES } from "./constant.js";
 
-const viewportRules = [
-  { name: BREAKPOINT.MOBILE, condition: (width) => width <= 475 },
-  { name: BREAKPOINT.TABLET, condition: (width) => width <= 768 },
-  { name: BREAKPOINT.SMALL_DESKTOP, condition: (width) => width <= 1440 },
-  { name: BREAKPOINT.LARGE_DESKTOP, condition: (width) => width <= 1920 },
-];
-
-export function getViewportName() {
+export function getViewporRule() {
   const screenWidth = document.documentElement.clientWidth;
-  console.log(screenWidth);
-  const viewport = viewportRules.find((rule) => rule.condition(screenWidth));
+  const viewport = VIEWPORTRULES.find((rule) => rule.condition(screenWidth));
 
-  return viewport ? viewport.name : BREAKPOINT.SMALL_DESKTOP;
+  return viewport ? viewport.name : VIEWPORTRULES[BREAKPOINT.SMALL_DESKTOP];
 }
 
 export function checkMotionReduce() {
   const query = window.matchMedia("(prefers-reduced-motion: reduce)");
   return query.matches;
+}
+
+export function createResizeScheduler({ targetElement, guardKey, callback }) {
+  if (!targetElement || typeof callback !== "function") {
+    return () => {};
+  }
+
+  if (typeof targetElement[guardKey] === "function") {
+    return targetElement[guardKey];
+  }
+  targetElement[guardKey] = true;
+
+  let isScheduled = false;
+
+  function schedule() {
+    if (isScheduled) return;
+
+    isScheduled = true;
+    requestAnimationFrame(() => {
+      isScheduled = false;
+      callback();
+    });
+  }
+
+  if (typeof ResizeObserver !== "undefined") {
+    const resizeObserver = new ResizeObserver(() => {
+      schedule();
+    });
+    resizeObserver.observe(targetElement);
+  } else {
+    window.addEventListener("resize", schedule, { passive: true });
+  }
+
+  // chạy 1 lần ban đầu
+  schedule();
+
+  return schedule;
 }
