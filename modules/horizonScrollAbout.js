@@ -1,15 +1,5 @@
 import { BREAKPOINT, DIRECTION } from "../utils/constant.js";
-
-function getSlideScrollElements() {
-  const tracker = document.querySelector('[data-horizon="tracker"]');
-  const wrapper = document.querySelector('[data-horizon="wrapper"]');
-  const progress = document.querySelector('[data-horizon="progress"]');
-  const progress_value = progress.querySelector("div");
-
-  if (!tracker || !wrapper || !progress || !progress_value) return null;
-
-  return { tracker, wrapper, progress_value };
-}
+import { createResizeScheduler } from "../utils/helpers.js";
 
 function getScrollAmount(direc, wrapper, tracker) {
   const isHorizon = direc === DIRECTION.HORIZON;
@@ -29,46 +19,53 @@ function createSlideScrollAnimation({
   direc = DIRECTION.HORIZON,
   scrub = 1,
   ease = "none",
+  run = true,
 } = {}) {
-  const els = getSlideScrollElements();
-  if (!els) return;
+  if (!run) return;
 
-  const { tracker, wrapper, progress_value } = els;
+  const tracker = document.querySelector('[data-horizon="tracker"]');
+  const wrapper = document.querySelector('[data-horizon="wrapper"]');
+  const progress = document.querySelector('[data-horizon="progress"]');
+  const progress_value = progress.querySelector("div");
+
+  if (!tracker || !wrapper || !progress || !progress_value) return null;
 
   const isHorizon = direc === DIRECTION.HORIZON;
   const axis = isHorizon ? "x" : "y";
 
+  const getAmount = () => getScrollAmount(direc, wrapper, tracker);
+  const getDistance = () => Math.abs(getAmount());
+
   const tl = gsap.timeline({
-    defautls: {
+    defaults: {
       ease, // make all tweens use a ease of none, feels nicer with working with scrub
     },
     scrollTrigger: {
       trigger: wrapper,
       start: "top top",
-      end: () => `+=${getScrollAmount(direc, wrapper, tracker) * -1}`,
+      end: () => `+=${getDistance()}`,
       pin: true,
       pinSpacing: true,
       scrub,
+      invalidateOnRefresh: true,
     },
   });
 
-  return tl
-    .to(tracker, {
-      [axis]: getScrollAmount(direc, wrapper, tracker),
-    })
-    .from(
-      progress_value,
-      {
-        scaleX: 0,
-        transformOrigin: "center left",
-      },
-      "<"
-    );
+  tl.to(tracker, {
+    [axis]: () => getAmount(),
+  }).from(
+    progress_value,
+    {
+      scaleX: 0,
+      transformOrigin: "center left",
+    },
+    "<"
+  );
 }
 
 // Strategies functions
 function mobileConfig() {
-  createSlideScrollAnimation({ direc: DIRECTION.VERTICAL });
+  createSlideScrollAnimation({ direc: DIRECTION.VERTICAL, run: false });
 }
 
 function desktopConfig() {
@@ -82,12 +79,25 @@ const AnimationStrategies = {
   [BREAKPOINT.LARGE_DESKTOP]: desktopConfig,
 };
 
-export function horizonScrollAbout(context) {
-  const { viewportName, isMotionReduced } = context;
+export function horizonScrollAbout(config) {
+  const { viewportName, isMotionReduced } = config;
 
   //isMotionReduced for next update
 
-  const animaiton = AnimationStrategies[viewportName]();
-  if (!animaiton) return;
-  animaiton();
+  const animation = AnimationStrategies[viewportName];
+  if (!animation) return;
+  animation();
+
+  if (viewportName === BREAKPOINT.MOBILE) return;
+
+  const scheduleAnimation = createResizeScheduler({
+    targetElement: document.querySelector('[data-horizon="wrapper"]'),
+    guardKey: "__horizonScrollAboutResize__",
+    callback: () => {
+      console.log("run");
+      ScrollTrigger.refresh();
+    },
+  });
+
+  scheduleAnimation();
 }
