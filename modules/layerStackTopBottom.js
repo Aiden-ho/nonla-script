@@ -15,7 +15,7 @@ function createLayerStackAnimation({
 
   if (!topLayer || !bottomLayer) return;
 
-  return gsap.to(topLayer, {
+  gsap.to(topLayer, {
     ease,
     scale,
     duration,
@@ -51,12 +51,12 @@ const AnimationStrategies = {
   [BREAKPOINT.LARGE_DESKTOP]: desktopConfig,
 };
 
-export function layerStackTopBottom(context) {
-  const { viewportName, isMotionReduced } = context;
+export function layerStackTopBottom(config) {
+  const { viewportName, isMotionReduced } = config;
 
   //isMotionReduced for next update
 
-  const animaiton = AnimationStrategies[viewportName]();
-  if (!animaiton) return;
-  animaiton();
+  const animation = AnimationStrategies[viewportName];
+  if (!animation) return;
+  animation();
 }

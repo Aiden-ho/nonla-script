@@ -15,7 +15,7 @@ function createSlittingHeroAnimation({
 
   if (!introSection || !heroSection || !triggerSlitting) return;
 
-  return gsap.to(introSection, {
+  gsap.to(introSection, {
     clipPath: "polygon(0% 0%, 0% 100%, 100% 100%, 100% 0% )",
     ease,
     duration,
@@ -50,12 +50,12 @@ const AnimationStrategies = {
 
 // main function
 
-export function slittingHeroSectionInit(context) {
-  const { viewportName, isMotionReduced } = context;
+export function slittingHeroSectionInit(config) {
+  const { viewportName, isMotionReduced } = config;
 
   //isMotionReduced for next update
 
-  const animaiton = AnimationStrategies[viewportName]();
-  if (!animaiton) return;
-  animaiton();
+  const animation = AnimationStrategies[viewportName];
+  if (!animation) return;
+  animation();
 }
