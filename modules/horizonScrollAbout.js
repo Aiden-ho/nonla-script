@@ -1,6 +1,24 @@
 import { BREAKPOINT, DIRECTION } from "../utils/constant.js";
 import { createResizeScheduler } from "../utils/helpers.js";
 
+let horizonTL = null;
+
+function killHorizon() {
+  horizonTL?.scrollTrigger?.kill(true);
+  horizonTL?.kill();
+  horizonTL = null;
+}
+
+function refreshOnImageLoad(tracker) {
+  const imgs = tracker.querySelectorAll("img");
+  if (!imgs.length) return;
+
+  imgs.forEach((img) => {
+    if (img.complete) return;
+    img.addEventListener("load", () => ScrollTrigger.refresh(), { once: true });
+  });
+}
+
 function getScrollAmount(direc, wrapper, tracker) {
   const isHorizon = direc === DIRECTION.HORIZON;
 
@@ -19,10 +37,7 @@ function createSlideScrollAnimation({
   direc = DIRECTION.HORIZON,
   scrub = 1,
   ease = "none",
-  run = true,
 } = {}) {
-  if (!run) return;
-
   const tracker = document.querySelector('[data-horizon="tracker"]');
   const wrapper = document.querySelector('[data-horizon="wrapper"]');
   const progress = document.querySelector('[data-horizon="progress"]');
@@ -53,23 +68,27 @@ function createSlideScrollAnimation({
 
   tl.to(tracker, {
     [axis]: () => getAmount(),
-  }).from(
+  }).to(
     progress_value,
     {
-      scaleX: 0,
+      right: "0%",
       transformOrigin: "center left",
     },
     "<"
   );
+
+  refreshOnImageLoad(tracker);
+  return tl;
 }
 
 // Strategies functions
 function mobileConfig() {
-  createSlideScrollAnimation({ direc: DIRECTION.VERTICAL, run: false });
+  killHorizon();
 }
 
 function desktopConfig() {
-  createSlideScrollAnimation();
+  killHorizon();
+  horizonTL = createSlideScrollAnimation();
 }
 
 const AnimationStrategies = {
@@ -79,7 +98,7 @@ const AnimationStrategies = {
   [BREAKPOINT.LARGE_DESKTOP]: desktopConfig,
 };
 
-export function horizonScrollAbout(config) {
+export function horizonScrollAboutInit(config) {
   const { viewportName, isMotionReduced } = config;
 
   //isMotionReduced for next update
@@ -94,7 +113,6 @@ export function horizonScrollAbout(config) {
     targetElement: document.querySelector('[data-horizon="wrapper"]'),
     guardKey: "__horizonScrollAboutResize__",
     callback: () => {
-      console.log("run");
       ScrollTrigger.refresh();
     },
   });
