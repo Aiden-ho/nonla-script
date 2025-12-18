@@ -1,10 +1,10 @@
 import { BREAKPOINT } from "../utils/constant.js";
-import { getViewporRule, createResizeScheduler } from "../utils/helpers.js";
+import { getViewportRule, createResizeScheduler } from "../utils/helpers.js";
 /*** ========== UTILITIES ========== ***/
 const ROPE_SPECS = {
   [BREAKPOINT.MOBILE]: {
     outerGap: 30,
-    baseScale: 0.8,
+    baseScale: 0.7,
     minInnerGap: 8,
     minScale: 0.5,
   },
@@ -21,8 +21,8 @@ const ROPE_SPECS = {
     minScale: 0.5,
   },
   [BREAKPOINT.LARGE_DESKTOP]: {
-    outerGap: 180,
-    baseScale: 1,
+    outerGap: 300,
+    baseScale: 1.2,
     minInnerGap: 8,
     minScale: 0.5,
   },
@@ -235,7 +235,7 @@ function setupRopeInstance({
 
     if (itemCount <= 0) return;
 
-    const viewportName = getViewporRule();
+    const viewportName = getViewportRule().name;
     const { outerGap, baseScale, minScale, minInnerGap } =
       ROPE_SPECS[viewportName];
 
