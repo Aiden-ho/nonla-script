@@ -18,8 +18,8 @@ export const VIEWPORTRULES = [
   },
   {
     name: BREAKPOINT.TABLET,
-    query: "(max-width: 991px)",
-    condition: (width) => width <= 991,
+    query: "(min-width: 768px) and (max-width: 991px)",
+    condition: (width) => 768 >= width <= 991,
   },
   {
     name: BREAKPOINT.SMALL_DESKTOP,
