@@ -1,16 +1,16 @@
 import { GsapSetup } from "./utils/gsapConfig.js";
-import { checkMotionReduce } from "./utils/helpers.js";
+import { checkMotionReduce, getViewportRule } from "./utils/helpers.js";
 import { VIEWPORTRULES } from "./utils/constant.js";
 import { slittingHeroSectionInit } from "./modules/slittingHeroSection.js";
 import { layerStackTopBottom } from "./modules/layerStackTopBottom.js";
-import { horizonScrollAbout } from "./modules/horizonScrollAbout.js";
+import { horizonScrollAboutInit } from "./modules/horizonScrollAbout.js";
 import { wheelRotateMomentSectionInit } from "./modules/wheelRotateMoment.js";
 import { initMomentsRope } from "./modules/calcRolePosition.js";
 
 const animationModules = [
   slittingHeroSectionInit,
   layerStackTopBottom,
-  horizonScrollAbout,
+  horizonScrollAboutInit,
   wheelRotateMomentSectionInit,
 ];
 
