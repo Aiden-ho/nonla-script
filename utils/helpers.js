@@ -1,10 +1,10 @@
 import { BREAKPOINT, VIEWPORTRULES } from "./constant.js";
 
-export function getViewporRule() {
+export function getViewportRule() {
   const screenWidth = document.documentElement.clientWidth;
   const viewport = VIEWPORTRULES.find((rule) => rule.condition(screenWidth));
 
-  return viewport ? viewport.name : VIEWPORTRULES[BREAKPOINT.SMALL_DESKTOP];
+  return viewport ? viewport : VIEWPORTRULES[BREAKPOINT.SMALL_DESKTOP];
 }
 
 export function checkMotionReduce() {
@@ -47,4 +47,11 @@ export function createResizeScheduler({ targetElement, guardKey, callback }) {
   schedule();
 
   return schedule;
+}
+
+export function getWindowWidth() {
+  return window.innerWidth;
+}
+export function getWindowHeight() {
+  return window.innerHeight;
 }
