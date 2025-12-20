@@ -19,12 +19,12 @@ export const VIEWPORTRULES = [
   {
     name: BREAKPOINT.TABLET,
     query: "(min-width: 768px) and (max-width: 991px)",
-    condition: (width) => 768 >= width <= 991,
+    condition: (width) => width >= 768 && width <= 991,
   },
   {
     name: BREAKPOINT.SMALL_DESKTOP,
     query: "(min-width: 1024px) and (max-width: 1440px)",
-    condition: (width) => 1024 >= width <= 1440,
+    condition: (width) => width >= 1024 && width <= 1440,
   },
   {
     name: BREAKPOINT.LARGE_DESKTOP,
