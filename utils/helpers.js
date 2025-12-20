@@ -12,46 +12,29 @@ export function checkMotionReduce() {
   return query.matches;
 }
 
-export function createResizeScheduler({ targetElement, guardKey, callback }) {
-  if (!targetElement || typeof callback !== "function") {
-    return () => {};
-  }
-
-  if (typeof targetElement[guardKey] === "function") {
-    return targetElement[guardKey];
-  }
-  targetElement[guardKey] = true;
-
+export function createRafDebouncer(callback) {
+  if (typeof callback !== "function") return () => {};
   let isScheduled = false;
 
-  function schedule() {
+  return function request() {
     if (isScheduled) return;
-
     isScheduled = true;
     requestAnimationFrame(() => {
       isScheduled = false;
       callback();
     });
-  }
-
-  if (typeof ResizeObserver !== "undefined") {
-    const resizeObserver = new ResizeObserver(() => {
-      schedule();
-    });
-    resizeObserver.observe(targetElement);
-  } else {
-    window.addEventListener("resize", schedule, { passive: true });
-  }
-
-  // chạy 1 lần ban đầu
-  schedule();
-
-  return schedule;
+  };
 }
 
 export function getWindowWidth() {
   return window.innerWidth;
 }
+
 export function getWindowHeight() {
   return window.innerHeight;
+}
+
+export function getMotionOptByViewport(viewportName, defaultObj, overideObj) {
+  let opt = overideObj[viewportName] ? overideObj[viewportName] : defaultObj;
+  return opt;
 }
