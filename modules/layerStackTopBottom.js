@@ -1,19 +1,34 @@
 import { BREAKPOINT } from "../utils/constant.js";
+import { getMotionOptByViewport } from "../utils/helpers.js";
+
+const DEFAULT_OPT = {
+  duration: 0.5,
+  ease: "power2.out",
+  start: "top 50%",
+  end: "top top",
+  scrub: 1,
+  filter: "brightness(50%) blur(10px)",
+  scale: 0.98,
+};
+const OVERRIDE_OPT = {
+  [BREAKPOINT.MOBILE]: {
+    ...DEFAULT_OPT,
+    filter: "brightness(70%) blur(4px)",
+    scale: 0.98,
+  },
+};
 
 // Make animation functions
-function createLayerStackAnimation({
-  duration = 0.5,
-  ease = "power2.out",
-  start = "top 50%",
-  end = "top top",
-  scrub = 1,
-  filter = "brightness(50%) blur(10px)",
-  scale = 0.98,
-} = {}) {
+function createLayerStackAnimation(motionConfig = {}) {
   const topLayer = document.querySelector('[data-layer="top"]');
   const bottomLayer = document.querySelector('[data-layer="bottom"]');
 
-  if (!topLayer || !bottomLayer) return;
+  if (!topLayer || !bottomLayer) {
+    console.warn("[LayerStackTopBottom] Missing DOM");
+    return null;
+  }
+
+  const { duration, ease, start, end, scrub, filter, scale } = motionConfig;
 
   gsap.to(topLayer, {
     ease,
@@ -32,31 +47,14 @@ function createLayerStackAnimation({
   });
 }
 
-// Strategies functions
-function mobileConfig() {
-  createLayerStackAnimation({
-    filter: "brightness(70%) blur(4px)",
-    scale: 0.98,
-  });
-}
+export function layerStackTopBottomInit(config = {}) {
+  const { viewportName } = config;
 
-function desktopConfig() {
-  createLayerStackAnimation();
-}
+  const motionConfig = getMotionOptByViewport(
+    viewportName,
+    DEFAULT_OPT,
+    OVERRIDE_OPT
+  );
 
-const AnimationStrategies = {
-  [BREAKPOINT.MOBILE]: mobileConfig,
-  [BREAKPOINT.TABLET]: desktopConfig,
-  [BREAKPOINT.SMALL_DESKTOP]: desktopConfig,
-  [BREAKPOINT.LARGE_DESKTOP]: desktopConfig,
-};
-
-export function layerStackTopBottom(config) {
-  const { viewportName, isMotionReduced } = config;
-
-  //isMotionReduced for next update
-
-  const animation = AnimationStrategies[viewportName];
-  if (!animation) return;
-  animation();
+  createLayerStackAnimation(motionConfig);
 }

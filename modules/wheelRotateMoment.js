@@ -1,22 +1,34 @@
 import { BREAKPOINT } from "../utils/constant.js";
-import {
-  getWindowWidth,
-  getWindowHeight,
-  createResizeScheduler,
-} from "../utils/helpers.js";
+import { getWindowWidth, getWindowHeight } from "../utils/helpers.js";
+import { getMotionOptByViewport } from "../utils/helpers.js";
+// Make animation functions
+const DEFAULT_OPT = {
+  scrub: 1.2,
+  turns: 6,
+  endPerTurn: 30,
+  fromValueTop: "70%",
+};
+const OVERRIDE_OPT = {
+  [BREAKPOINT.MOBILE]: {
+    ...DEFAULT_OPT,
+    turns: 4,
+    endPerTurn: 20,
+    fromValueTop: "30%",
+  },
+};
 
 // Make animation functions
-function createWheelRotateAnimation({
-  scrub = 1.2,
-  turns = 6,
-  endPerTurn = 30,
-  fromValueTop = "70%",
-} = {}) {
+function createWheelRotateAnimation(motionConfig = {}) {
   const wheel = document.querySelector('[data-wheel="wheel"]');
   const contentBox = document.querySelector('[data-wheel="contentBox"]');
   const section = document.querySelector('[data-wheel="section"]');
 
-  if (!wheel || !section || !contentBox) return;
+  if (!wheel || !section || !contentBox) {
+    console.warn("[wheelRotateMoment] Missing DOM");
+    return null;
+  }
+
+  const { scrub, turns, endPerTurn, fromValueTop } = motionConfig;
 
   const PRE_PROGRESS = 0.2;
 
@@ -75,42 +87,14 @@ function createWheelRotateAnimation({
   });
 }
 
-// Strategies functions
-function mobileConfig() {
-  createWheelRotateAnimation({
-    turns: 4,
-    endPerTurn: 20,
-    fromValueTop: "30%",
-  });
-}
+export function wheelRotateMomentSectionInit(config = {}) {
+  const { viewportName } = config;
 
-function desktopConfig() {
-  createWheelRotateAnimation();
-}
+  const motionConfig = getMotionOptByViewport(
+    viewportName,
+    DEFAULT_OPT,
+    OVERRIDE_OPT
+  );
 
-const AnimationStrategies = {
-  [BREAKPOINT.MOBILE]: mobileConfig,
-  [BREAKPOINT.TABLET]: desktopConfig,
-  [BREAKPOINT.SMALL_DESKTOP]: desktopConfig,
-  [BREAKPOINT.LARGE_DESKTOP]: desktopConfig,
-};
-
-export function wheelRotateMomentSectionInit(config) {
-  const { viewportName, isMotionReduced } = config;
-
-  //isMotionReduced for next update
-
-  const animation = AnimationStrategies[viewportName];
-  if (!animation) return;
-  animation();
-
-  const scheduleAnimation = createResizeScheduler({
-    targetElement: document.querySelector('[data-horizon="wrapper"]'),
-    guardKey: "__wheelRotateMomentResize__",
-    callback: () => {
-      ScrollTrigger.refresh();
-    },
-  });
-
-  scheduleAnimation();
+  createWheelRotateAnimation(motionConfig);
 }

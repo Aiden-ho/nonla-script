@@ -1,22 +1,16 @@
 import { BREAKPOINT, DIRECTION } from "../utils/constant.js";
-import { createResizeScheduler } from "../utils/helpers.js";
+import { getMotionOptByViewport } from "../utils/helpers.js";
 
+const DEFAULT_OPT = { direc: DIRECTION.HORIZON, scrub: 1, ease: "none" };
+const OVERRIDE_OPT = {
+  [BREAKPOINT.MOBILE]: null,
+};
 let horizonTL = null;
 
 function killHorizon() {
   horizonTL?.scrollTrigger?.kill(true);
   horizonTL?.kill();
   horizonTL = null;
-}
-
-function refreshOnImageLoad(tracker) {
-  const imgs = tracker.querySelectorAll("img");
-  if (!imgs.length) return;
-
-  imgs.forEach((img) => {
-    if (img.complete) return;
-    img.addEventListener("load", () => ScrollTrigger.refresh(), { once: true });
-  });
 }
 
 function getScrollAmount(direc, wrapper, tracker) {
@@ -33,17 +27,18 @@ function getScrollAmount(direc, wrapper, tracker) {
 }
 
 // Make animation functions
-function createSlideScrollAnimation({
-  direc = DIRECTION.HORIZON,
-  scrub = 1,
-  ease = "none",
-} = {}) {
+function createSlideScrollAnimation(motionConfig = {}) {
   const tracker = document.querySelector('[data-horizon="tracker"]');
   const wrapper = document.querySelector('[data-horizon="wrapper"]');
   const progress = document.querySelector('[data-horizon="progress"]');
-  const progress_value = progress.querySelector("div");
+  const progress_value = progress?.querySelector("div");
 
-  if (!tracker || !wrapper || !progress || !progress_value) return null;
+  if (!tracker || !wrapper || !progress || !progress_value) {
+    console.warn("[horizonScrollAbout] Missing DOM");
+    return null;
+  }
+
+  const { direc, scrub, ease } = motionConfig;
 
   const isHorizon = direc === DIRECTION.HORIZON;
   const axis = isHorizon ? "x" : "y";
@@ -77,45 +72,23 @@ function createSlideScrollAnimation({
     "<"
   );
 
-  refreshOnImageLoad(tracker);
   return tl;
 }
 
-// Strategies functions
-function mobileConfig() {
+export function horizonScrollAboutInit(config = {}) {
+  const { viewportName } = config;
+
+  const motionConfig = getMotionOptByViewport(
+    viewportName,
+    DEFAULT_OPT,
+    OVERRIDE_OPT
+  );
+
+  if (motionConfig === null) {
+    killHorizon();
+    return;
+  }
+
   killHorizon();
-}
-
-function desktopConfig() {
-  killHorizon();
-  horizonTL = createSlideScrollAnimation();
-}
-
-const AnimationStrategies = {
-  [BREAKPOINT.MOBILE]: mobileConfig,
-  [BREAKPOINT.TABLET]: desktopConfig,
-  [BREAKPOINT.SMALL_DESKTOP]: desktopConfig,
-  [BREAKPOINT.LARGE_DESKTOP]: desktopConfig,
-};
-
-export function horizonScrollAboutInit(config) {
-  const { viewportName, isMotionReduced } = config;
-
-  //isMotionReduced for next update
-
-  const animation = AnimationStrategies[viewportName];
-  if (!animation) return;
-  animation();
-
-  if (viewportName === BREAKPOINT.MOBILE) return;
-
-  const scheduleAnimation = createResizeScheduler({
-    targetElement: document.querySelector('[data-horizon="wrapper"]'),
-    guardKey: "__horizonScrollAboutResize__",
-    callback: () => {
-      ScrollTrigger.refresh();
-    },
-  });
-
-  scheduleAnimation();
+  horizonTL = createSlideScrollAnimation(motionConfig);
 }

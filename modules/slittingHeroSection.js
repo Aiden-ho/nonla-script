@@ -1,19 +1,33 @@
 import { BREAKPOINT } from "../utils/constant.js";
-
+import { getMotionOptByViewport } from "../utils/helpers.js";
 // Make animation functions
+const DEFAULT_OPT = {
+  duration: 0.5,
+  ease: "power1.out",
+  start: "top top",
+  end: "+=100%",
+  scrub: 1,
+};
+const OVERRIDE_OPT = {
+  [BREAKPOINT.MOBILE]: {
+    ...DEFAULT_OPT,
+    duration: 0.3,
+    scrub: 0.3,
+    end: "+=60%",
+  },
+};
 
-function createSlittingHeroAnimation({
-  duration = 0.5,
-  ease = "power1.out",
-  start = "top top",
-  end = "+=100%",
-  scrub = 1,
-} = {}) {
+function createSlittingHeroAnimation(motionConfig = {}) {
   const introSection = document.querySelector('[data-section="intro"]');
   const heroSection = document.querySelector('[data-section="hero"]');
   const triggerSlitting = document.querySelector('[data-trigger="slit"]');
 
-  if (!introSection || !heroSection || !triggerSlitting) return;
+  if (!introSection || !heroSection || !triggerSlitting) {
+    console.warn("[SlittingHeroSection] Missing DOM");
+    return null;
+  }
+
+  const { duration, scrub, ease, start, end } = motionConfig;
 
   gsap.to(introSection, {
     clipPath: "polygon(0% 0%, 0% 100%, 100% 100%, 100% 0% )",
@@ -31,31 +45,15 @@ function createSlittingHeroAnimation({
   });
 }
 
-// Strategies functions
-
-function mobileConfig() {
-  createSlittingHeroAnimation({ duration: 0.3, scrub: 0.3, end: "+=60%" });
-}
-
-function desktopConfig() {
-  createSlittingHeroAnimation();
-}
-
-const AnimationStrategies = {
-  [BREAKPOINT.MOBILE]: mobileConfig,
-  [BREAKPOINT.TABLET]: desktopConfig,
-  [BREAKPOINT.SMALL_DESKTOP]: desktopConfig,
-  [BREAKPOINT.LARGE_DESKTOP]: desktopConfig,
-};
-
 // main function
+export function slittingHeroSectionInit(config = {}) {
+  const { viewportName } = config;
 
-export function slittingHeroSectionInit(config) {
-  const { viewportName, isMotionReduced } = config;
+  const motionConfig = getMotionOptByViewport(
+    viewportName,
+    DEFAULT_OPT,
+    OVERRIDE_OPT
+  );
 
-  //isMotionReduced for next update
-
-  const animation = AnimationStrategies[viewportName];
-  if (!animation) return;
-  animation();
+  createSlittingHeroAnimation(motionConfig);
 }
