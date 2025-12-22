@@ -2,15 +2,15 @@ import { createRafDebouncer, warn } from "../utils/helpers.js";
 import { createResizeObserver } from "../utils/observeHelper.js";
 
 const ROOT_DOM = {
-  list: ".materials_list",
-  item: ".materials_list-item",
-  overlay: ".materials_overlay",
+  list: '[data-drawer="list"]',
+  item: '[data-drawer="item"]',
+  overlay: '[data-drawer="overlay"]',
 };
 
 const ITEM_DOM = {
-  content: ".list-item_inner",
-  desc: ".list-item-text",
-  img: ".list-item_img-wrapper",
+  content: '[data-drawer="content"]',
+  desc: '[data-drawer="desc"]',
+  img: '[data-drawer="img"]',
 };
 
 const state = {
