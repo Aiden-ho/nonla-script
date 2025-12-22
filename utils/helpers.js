@@ -3,8 +3,9 @@ import { BREAKPOINT, VIEWPORTRULES } from "./constant.js";
 export function getViewportRule() {
   const screenWidth = document.documentElement.clientWidth;
   const viewport = VIEWPORTRULES.find((rule) => rule.condition(screenWidth));
-
-  return viewport ? viewport : VIEWPORTRULES[BREAKPOINT.SMALL_DESKTOP];
+  return viewport
+    ? viewport
+    : VIEWPORTRULES.find((r) => r.name === BREAKPOINT.SMALL_DESKTOP);
 }
 
 export function checkMotionReduce() {
@@ -37,4 +38,8 @@ export function getWindowHeight() {
 export function getMotionOptByViewport(viewportName, defaultObj, overideObj) {
   let opt = overideObj[viewportName] ? overideObj[viewportName] : defaultObj;
   return opt;
+}
+
+export function warn(name, msg, extra) {
+  console.warn(name, msg, extra);
 }
