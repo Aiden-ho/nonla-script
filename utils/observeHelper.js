@@ -25,8 +25,10 @@ export function createResizeObserver(targetElement, callback) {
   }
 
   if (typeof ResizeObserver !== "undefined") {
-    const resizeObserver = new ResizeObserver(() => {
-      callback();
+    const resizeObserver = new ResizeObserver((entries) => {
+      entries.forEach(function (entry) {
+        if (entry.target === targetElement) callback();
+      });
     });
     resizeObserver.observe(targetElement);
   } else {
