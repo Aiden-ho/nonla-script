@@ -1,5 +1,6 @@
 import { BREAKPOINT } from "../utils/constant.js";
-import { getViewportRule, createResizeScheduler } from "../utils/helpers.js";
+import { getViewportRule, createRafDebouncer } from "../utils/helpers.js";
+import { createResizeObserver } from "../utils/observeHelper.js";
 /*** ========== UTILITIES ========== ***/
 const ROPE_SPECS = {
   [BREAKPOINT.MOBILE]: {
@@ -234,8 +235,8 @@ function setupRopeInstance({
     const itemCount = itemWidths.length;
 
     if (itemCount <= 0) return;
-
     const viewportName = getViewportRule().name;
+
     const { outerGap, baseScale, minScale, minInnerGap } =
       ROPE_SPECS[viewportName];
 
@@ -314,33 +315,7 @@ function setupRopeInstance({
   }
 
   /*** ========== THROTTLING & LISTENERS (PER BOX) ========== ***/
-
-  const schedulePlaceItems = createResizeScheduler({
-    targetElement: box,
-    guardKey: "__momentsRopeResizeOnce__",
-    callback: placeItemsCal,
-  });
-
-  schedulePlaceItems();
-
-  // Update when the rope box enters the viewport (optional).
-  // let ropeInViewportObserver = null;
-  // if (useIntersectionObserver && typeof IntersectionObserver !== "undefined") {
-  //   ropeInViewportObserver = new IntersectionObserver(
-  //     (entries) => {
-  //       const entry = entries[0];
-  //       if (!entry) return;
-  //       if (entry.isIntersecting) {
-  //         placeItems();
-  //         // once time run
-  //         ropeInViewportObserver.unobserve(box);
-  //         ropeInViewportObserver.disconnect();
-  //         ropeInViewportObserver = null;
-  //       }
-  //     },
-  //     { root: null, threshold: 0 }
-  //   );
-
-  //   ropeInViewportObserver.observe(box);
-  // }
+  const requestCal = createRafDebouncer(() => placeItemsCal());
+  createResizeObserver(box, requestCal);
+  requestCal();
 }
