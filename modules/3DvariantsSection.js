@@ -18,7 +18,7 @@ function createDesktopAnimation() {
   }
 
   gsap.set(imgs, {
-    opacity: 0.001,
+    autoAlpha: 0,
     x: 0,
     y: 0,
     z: 0,
@@ -32,12 +32,13 @@ function createDesktopAnimation() {
       end: "+=" + imgs.length * 100,
       scrub: 1,
       pin: true,
+      invalidateOnRefresh: true,
     },
   });
 
   imgs.forEach((img, index) => {
     const at = index * 0.4;
-    tl.to(img, { opacity: 1, duration: 0.01 }, at);
+    tl.to(img, { autoAlpha: 1, duration: 0.01 }, at);
     tl.to(
       img,
       {
