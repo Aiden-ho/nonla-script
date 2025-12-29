@@ -1,48 +1,76 @@
-import { BREAKPOINT } from "../utils/constant.js";
-import { getMotionOptByViewport } from "../utils/helpers.js";
+import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
+import { getMotionOptByViewport, warn } from "../utils/helpers.js";
+
+const ROOT_DOM = {
+  intro: '[data-slit="intro"]',
+  hero: '[data-slit="hero"]',
+  introHeading: '[data-slit="heading"]',
+  wrapper: '[data-slit="wrapper"]',
+};
+
 // Make animation functions
 const DEFAULT_OPT = {
-  duration: 0.5,
-  ease: "power1.out",
+  ease: GSAPCONFIG.EASE,
   start: "top top",
-  end: "+=100%",
-  scrub: 1,
+  end: "+=140%",
+  duration: 0.67,
+  hold: 0.33,
+  scrub: GSAPCONFIG.SCRUB,
 };
+
 const OVERRIDE_OPT = {
   [BREAKPOINT.MOBILE]: {
     ...DEFAULT_OPT,
-    duration: 0.3,
-    scrub: 0.3,
     end: "+=60%",
+    duration: 0.85,
+    hold: 0.15,
   },
 };
 
 function createSlittingHeroAnimation(motionConfig = {}) {
-  const introSection = document.querySelector('[data-section="intro"]');
-  const heroSection = document.querySelector('[data-section="hero"]');
-  const triggerSlitting = document.querySelector('[data-trigger="slit"]');
+  const wrapper = document.querySelector(ROOT_DOM.wrapper);
 
-  if (!introSection || !heroSection || !triggerSlitting) {
-    console.warn("[SlittingHeroSection] Missing DOM");
+  if (!wrapper) {
+    warn("[SlittingHeroSection]", " Missing ROOT DOM", { wrapper });
     return null;
   }
 
-  const { duration, scrub, ease, start, end } = motionConfig;
+  const intro = wrapper.querySelector(ROOT_DOM.intro);
+  const hero = wrapper.querySelector(ROOT_DOM.hero);
+  const headingIntro = wrapper.querySelector(ROOT_DOM.introHeading);
 
-  gsap.to(introSection, {
-    clipPath: "polygon(0% 0%, 0% 100%, 100% 100%, 100% 0% )",
-    ease,
-    duration,
+  if (!intro || !hero || !headingIntro) {
+    warn("[SlittingHeroSection]", " Missing ROOT DOM", {
+      introSection,
+      heroSection,
+      headingIntro,
+    });
+    return null;
+  }
+
+  const { scrub, ease, start, end, duration, hold } = motionConfig;
+
+  const tl = gsap.timeline({
+    defaults: { ease },
     scrollTrigger: {
-      trigger: triggerSlitting,
+      trigger: wrapper,
       start,
       end,
       scrub,
-      onUpdate: ({ progress }) => {
-        gsap.set(heroSection, { opacity: 1 - progress });
-      },
     },
   });
+
+  tl.to(
+    intro,
+    {
+      clipPath: "polygon(0% 0%, 0% 100%, 100% 100%, 100% 0%)",
+      duration,
+    },
+    0
+  );
+  tl.to(hero, { opacity: 0, duration }, 0);
+  tl.to(headingIntro, { opacity: 1, duration }, 0);
+  tl.to({}, { duration: hold });
 }
 
 // main function
