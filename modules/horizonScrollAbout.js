@@ -1,7 +1,17 @@
-import { BREAKPOINT, DIRECTION } from "../utils/constant.js";
-import { getMotionOptByViewport } from "../utils/helpers.js";
+import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
+import { getMotionOptByViewport, warn } from "../utils/helpers.js";
 
-const DEFAULT_OPT = { direc: DIRECTION.HORIZON, scrub: 1, ease: "none" };
+const ROOT_DOM = {
+  tracker: '[data-horizon="tracker"]',
+  wrapper: '[data-horizon="wrapper"]',
+  progress: '[data-horizon="progress"]',
+};
+const DEFAULT_OPT = {
+  scrub: GSAPCONFIG.SCRUB,
+  ease: GSAPCONFIG.EASE,
+  startHold: 0.02,
+  endHold: 0.02,
+};
 const OVERRIDE_OPT = {
   [BREAKPOINT.MOBILE]: null,
 };
@@ -13,11 +23,9 @@ function killHorizon() {
   horizonTL = null;
 }
 
-function getScrollAmount(direc, wrapper, tracker) {
-  const isHorizon = direc === DIRECTION.HORIZON;
-
-  const wrapperSize = isHorizon ? wrapper.clientWidth : wrapper.clientHeight;
-  const trackSize = isHorizon ? tracker.scrollWidth : tracker.scrollHeight;
+function getScrollAmount(wrapper, tracker) {
+  const wrapperSize = wrapper.clientWidth;
+  const trackSize = tracker.scrollWidth;
 
   const diff = trackSize - wrapperSize;
 
@@ -28,23 +36,27 @@ function getScrollAmount(direc, wrapper, tracker) {
 
 // Make animation functions
 function createSlideScrollAnimation(motionConfig = {}) {
-  const tracker = document.querySelector('[data-horizon="tracker"]');
-  const wrapper = document.querySelector('[data-horizon="wrapper"]');
-  const progress = document.querySelector('[data-horizon="progress"]');
+  const wrapper = document.querySelector(ROOT_DOM.wrapper);
+
+  if (!wrapper) {
+    warn("[horizonScrollAbout]", "Missing DOM", { wrapper });
+    return null;
+  }
+
+  const tracker = wrapper.querySelector('[data-horizon="tracker"]');
+  const progress = wrapper.querySelector('[data-horizon="progress"]');
   const progress_value = progress?.querySelector("div");
 
-  if (!tracker || !wrapper || !progress || !progress_value) {
+  if (!tracker || !progress || !progress_value) {
     console.warn("[horizonScrollAbout] Missing DOM");
     return null;
   }
 
-  const { direc, scrub, ease } = motionConfig;
+  const { scrub, ease, startHold, endHold } = motionConfig;
 
-  const isHorizon = direc === DIRECTION.HORIZON;
-  const axis = isHorizon ? "x" : "y";
-
-  const getAmount = () => getScrollAmount(direc, wrapper, tracker);
+  const getAmount = () => getScrollAmount(wrapper, tracker);
   const getDistance = () => Math.abs(getAmount());
+  const totalEnd = 1 + startHold + endHold;
 
   const tl = gsap.timeline({
     defaults: {
@@ -53,7 +65,7 @@ function createSlideScrollAnimation(motionConfig = {}) {
     scrollTrigger: {
       trigger: wrapper,
       start: "top top",
-      end: () => `+=${getDistance()}`,
+      end: () => `+=${getDistance() * totalEnd}`,
       pin: true,
       pinSpacing: true,
       scrub,
@@ -61,8 +73,10 @@ function createSlideScrollAnimation(motionConfig = {}) {
     },
   });
 
+  tl.to({}, { duration: startHold });
+
   tl.to(tracker, {
-    [axis]: () => getAmount(),
+    x: () => getAmount(),
   }).to(
     progress_value,
     {
@@ -71,6 +85,8 @@ function createSlideScrollAnimation(motionConfig = {}) {
     },
     "<"
   );
+
+  tl.to({}, { duration: endHold });
 
   return tl;
 }
