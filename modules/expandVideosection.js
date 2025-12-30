@@ -7,13 +7,13 @@ const DEFAULT_OPT = {
   scrollFactor: 3,
   scrub: GSAPCONFIG.SCRUB,
   ease: GSAPCONFIG.EASE,
-  SEG: { startAt: 0.05, textDone: 0.1, headingDone: 0.85, videoDone: 0.9 },
+  DUR: { startAt: 0.05, textDone: 0.1, headingDone: 0.85, videoDone: 0.9 },
 };
 const OVERRIDE_OPT = {
   [BREAKPOINT.MOBILE]: {
     ...DEFAULT_OPT,
     scrollFactor: 2,
-    SEG: { startAt: 0.02, textDone: 0.06, headingDone: 0.85, videoDone: 0.9 },
+    DUR: { startAt: 0.02, textDone: 0.06, headingDone: 0.85, videoDone: 0.9 },
   },
 };
 
@@ -54,7 +54,7 @@ function expandVideoAnimation(motionConfig = {}) {
     return null;
   }
 
-  const { scrollFactor, scrub, moveRatio, SEG, ease } = motionConfig;
+  const { scrollFactor, scrub, DUR, ease } = motionConfig;
 
   gsap.set(videoCotent, { scale: 0 });
   gsap.set(introText, { overflow: "hidden" });
@@ -94,28 +94,28 @@ function expandVideoAnimation(motionConfig = {}) {
         const dir = i === 0 ? -1 : 1;
         return dir * moveXMax;
       },
-      duration: SEG.headingDone - SEG.startAt,
+      duration: DUR.headingDone - DUR.startAt,
     },
-    SEG.startAt
+    DUR.startAt
   );
   tl.to(
     introText,
     {
       autoAlpha: 0,
       height: 0,
-      duration: SEG.textDone - SEG.startAt,
+      duration: DUR.textDone - DUR.startAt,
     },
-    SEG.startAt
+    DUR.startAt
   );
   tl.to(
     videoCotent,
-    { scale: 1, duration: SEG.videoDone - SEG.startAt },
-    SEG.startAt
+    { scale: 1, duration: DUR.videoDone - DUR.startAt },
+    DUR.startAt
   );
   tl.to(
     introBg,
-    { scale: 0, duration: SEG.videoDone - SEG.startAt },
-    SEG.startAt
+    { scale: 0, duration: DUR.videoDone - DUR.startAt },
+    DUR.startAt
   );
   tl.to({}, { duration: 0.1 });
 }
