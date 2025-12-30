@@ -9,8 +9,7 @@ const ROOT_DOM = {
 const DEFAULT_OPT = {
   scrub: GSAPCONFIG.SCRUB,
   ease: GSAPCONFIG.EASE,
-  startHold: 0.02,
-  endHold: 0.02,
+  holdEnd: 0.06,
 };
 const OVERRIDE_OPT = {
   [BREAKPOINT.MOBILE]: null,
@@ -39,7 +38,7 @@ function createSlideScrollAnimation(motionConfig = {}) {
   const wrapper = document.querySelector(ROOT_DOM.wrapper);
 
   if (!wrapper) {
-    warn("[horizonScrollAbout]", "Missing DOM", { wrapper });
+    warn("[horizonScrollAbout]", "Missing ROOT DOM", { wrapper });
     return null;
   }
 
@@ -48,15 +47,20 @@ function createSlideScrollAnimation(motionConfig = {}) {
   const progress_value = progress?.querySelector("div");
 
   if (!tracker || !progress || !progress_value) {
-    console.warn("[horizonScrollAbout] Missing DOM");
+    warn("[horizonScrollAbout]", "Missing ROOT DOM", {
+      tracker,
+      progress,
+      progress_value,
+    });
     return null;
   }
 
-  const { scrub, ease, startHold, endHold } = motionConfig;
+  const { scrub, ease, holdEnd } = motionConfig;
 
   const getAmount = () => getScrollAmount(wrapper, tracker);
   const getDistance = () => Math.abs(getAmount());
-  const totalEnd = 1 + startHold + endHold;
+  const mainDuration = 1;
+  const scroll_ratio = mainDuration + holdEnd;
 
   const tl = gsap.timeline({
     defaults: {
@@ -65,28 +69,28 @@ function createSlideScrollAnimation(motionConfig = {}) {
     scrollTrigger: {
       trigger: wrapper,
       start: "top top",
-      end: () => `+=${getDistance() * totalEnd}`,
+      end: () => `+=${getDistance() * scroll_ratio}`,
       pin: true,
       pinSpacing: true,
       scrub,
+      anticipatePin: 1,
       invalidateOnRefresh: true,
     },
   });
 
-  tl.to({}, { duration: startHold });
-
   tl.to(tracker, {
     x: () => getAmount(),
+    duration: mainDuration,
   }).to(
     progress_value,
     {
       right: "0%",
       transformOrigin: "center left",
+      duration: mainDuration,
     },
     "<"
   );
-
-  tl.to({}, { duration: endHold });
+  tl.to({}, { duration: holdEnd });
 
   return tl;
 }
