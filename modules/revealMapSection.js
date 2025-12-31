@@ -5,7 +5,7 @@ import {
   getViewportRule,
 } from "../utils/helpers.js";
 import { createResizeObserver } from "../utils/observeHelper.js";
-import { BREAKPOINT } from "../utils/constant.js";
+import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
 
 const ROOT_DOM = {
   section: "[data-location='section']",
@@ -24,6 +24,7 @@ const CONTENT_DOM = {
 const state = {
   isInit: false,
   activeTarget: null,
+  isReaveled: false,
 };
 
 const DEFAULT_OPT = { pin: true };
@@ -88,25 +89,28 @@ function createRevealMapAnimation(dom = {}, motionConfig = {}) {
   });
 
   const tl = gsap.timeline({
+    defaults: { ease: GSAPCONFIG.EASE },
     scrollTrigger: {
       trigger: section,
       start: "top top",
-      end: "bottom 20%",
+      end: "bottom 10%",
       pin,
       pinSpacing: pin,
+      invalidateOnRefresh: true,
     },
+    onComplete: () => (state.isReaveled = true),
   });
 
   tl.from(headinngSpit.lines, {
     yPercent: 115,
     duration: 1.2,
-    ease: "cubic-bezier(0.76, 0, 0.24, 1)",
+    ease: GSAPCONFIG.SLIT_TEXT_EASE,
     stagger: 0.04,
   })
     .from(textSpit.lines, {
       yPercent: 115,
       duration: 1,
-      ease: "cubic-bezier(0.76, 0, 0.24, 1)",
+      ease: GSAPCONFIG.SLIT_TEXT_EASE,
       stagger: 0.04,
     })
     .to(map, { autoAlpha: 1, duration: 0.5 })
@@ -120,6 +124,8 @@ function initEventOnce(dom = {}) {
   const { action, map } = dom;
 
   action.addEventListener("click", function (e) {
+    if (!state.isReaveled) return;
+
     const tab = e.target.closest("[data-target]");
     if (!tab) return;
 
@@ -130,6 +136,8 @@ function initEventOnce(dom = {}) {
   });
 
   map.addEventListener("click", function (e) {
+    if (!state.isReaveled) return;
+
     const pin = e.target.closest(".pin");
     if (!pin) return;
 
