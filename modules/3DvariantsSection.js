@@ -1,6 +1,6 @@
 import { warn } from "../utils/helpers.js";
 import { STORE } from "../utils/globalStore.js";
-import { BREAKPOINT } from "../utils/constant.js";
+import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
 
 const ROOT_DOM = {
   section: "[data-zoom='section']",
@@ -26,11 +26,12 @@ function createDesktopAnimation() {
   });
 
   const tl = gsap.timeline({
+    defaults: { ease: GSAPCONFIG.EASE },
     scrollTrigger: {
       trigger: wrapper,
       start: "top top",
       end: "+=" + imgs.length * 100,
-      scrub: 1,
+      scrub: GSAPCONFIG.SCRUB,
       pin: true,
       invalidateOnRefresh: true,
     },
@@ -76,11 +77,12 @@ function createMobileAnimation() {
     );
 
   const tl = gsap.timeline({
+    defaults: { ease: GSAPCONFIG.EASE },
     scrollTrigger: {
       trigger: section,
       start: "top top",
       end: () => `+=${totalHeigth()}px`,
-      scrub: true,
+      scrub: GSAPCONFIG.SCRUB,
       pin: true,
     },
   });
