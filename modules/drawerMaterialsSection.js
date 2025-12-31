@@ -1,5 +1,6 @@
 import { createRafDebouncer, warn } from "../utils/helpers.js";
 import { createResizeObserver } from "../utils/observeHelper.js";
+import { GSAPCONFIG } from "../utils/constant.js";
 
 const ROOT_DOM = {
   list: '[data-drawer="list"]',
@@ -47,13 +48,16 @@ function initEventOnce() {
     }
 
     createItemAnimation(item);
-    openItem(item);
+    openItem(item, e.currentTarget);
   });
 
   overlay.addEventListener("click", () => {
     if (!state.activeItem) return;
-    closeItem(state.activeItem);
+
+    const item = state.activeItem;
     state.activeItem = null;
+
+    closeItem(item);
   });
 }
 
@@ -65,7 +69,7 @@ function getItemDOM(item) {
   };
 }
 
-function openItem(item) {
+function openItem(item, list) {
   const { content } = getItemDOM(item);
 
   if (!content) {
@@ -74,14 +78,16 @@ function openItem(item) {
   }
 
   let height = measureHeight.get(item);
-  if (!height) {
+  if (!measureHeight.has(item)) {
     height = getMeasureHeight(item, content);
     setupROMeasureHeight(item, content);
   }
 
   item.style.setProperty("--expand-height", `${height}px`);
+  list.style.setProperty("--expand-height", `${height}px`);
   item.classList.add("is-actived");
   state.activeItem = item;
+
   item.__tl.play();
 }
 
@@ -102,7 +108,6 @@ function setupROMeasureHeight(item, content) {
     const newHeight = content.scrollHeight;
     measureHeight.set(item, newHeight);
 
-    // 🔥 nếu item đang mở → update ngay
     if (state.activeItem === item) {
       item.style.setProperty("--expand-height", `${newHeight}px`);
     }
@@ -118,7 +123,7 @@ function createItemAnimation(item) {
   const { desc, img } = getItemDOM(item);
 
   if (!desc || !img) {
-    warn("[drawerMaterialsSection] Missing DOM DESC");
+    warn("[drawerMaterialsSection]", "Missing DOM DESC", { desc, img });
     return null;
   }
 
@@ -133,7 +138,7 @@ function createItemAnimation(item) {
     {
       yPercent: 115,
       duration: 1,
-      ease: "cubic-bezier(0.76, 0, 0.24, 1)",
+      ease: GSAPCONFIG.SLIT_TEXT_EASE,
       stagger: 0.04,
     },
     "0"
@@ -145,10 +150,6 @@ function createItemAnimation(item) {
     },
     "0"
   );
-
-  tl.eventCallback("onReverseComplete", () => {
-    item.classList.remove("is-actived");
-  });
 
   item.__tl = tl;
 }
