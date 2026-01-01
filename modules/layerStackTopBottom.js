@@ -39,6 +39,7 @@ function createLayerStackAnimation(motionConfig = {}) {
       start,
       end,
       scrub,
+      invalidateOnRefresh: true,
     },
   });
 }

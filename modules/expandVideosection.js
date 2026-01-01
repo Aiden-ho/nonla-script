@@ -67,6 +67,7 @@ function expandVideoAnimation(motionConfig = {}) {
       start: "top 20%",
       end: "top top",
       scrub: true,
+      invalidateOnRefresh: true,
     },
   });
 

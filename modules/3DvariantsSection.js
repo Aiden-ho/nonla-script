@@ -84,6 +84,7 @@ function createMobileAnimation() {
       end: () => `+=${totalHeigth()}px`,
       scrub: GSAPCONFIG.SCRUB,
       pin: true,
+      invalidateOnRefresh: true,
     },
   });
 

@@ -57,6 +57,7 @@ function createSlittingHeroAnimation(motionConfig = {}) {
       start,
       end,
       scrub,
+      invalidateOnRefresh: true,
     },
   });
 
