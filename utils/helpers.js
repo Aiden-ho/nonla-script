@@ -27,13 +27,9 @@ export function createRafDebouncer(callback) {
   };
 }
 
-export function getWindowWidth() {
-  return window.innerWidth;
-}
-
-export function getWindowHeight() {
-  return window.innerHeight;
-}
+export const requestSTRefresh = createRafDebouncer(() =>
+  ScrollTrigger.refresh()
+);
 
 export function getMotionOptByViewport(viewportName, defaultObj, overideObj) {
   let opt = overideObj[viewportName] ? overideObj[viewportName] : defaultObj;
