@@ -13,29 +13,47 @@ const OVERRIDE_OPT = {
   },
 };
 
-// helpers/wheelGeometry.js
-function getWheelGeometry({ svg, preProgress }) {
-  const width = svg.getBoundingClientRect().width;
-  const circumference = width * Math.PI;
+const PRE_PROGRESS = 0.2;
+const BOX_END_AT = 0.9;
+const PRE_BOX_PROGRESS = BOX_END_AT * PRE_PROGRESS;
+const SCALE = 0.8;
 
-  const start = -(STORE.VW / 2 + width / 2);
-  const end = STORE.VW / 2 + width / 2;
+const GEOMETRY_STATE = {
+  geo: null,
+  boxHeight: 0,
+  isInit: false,
+};
+
+function computeGeometry({ svg, contentBox }) {
+  const width = svg.getBoundingClientRect().width;
+  const visualWidth = width * SCALE;
+
+  const start = -(STORE.VW / 2 + visualWidth / 2);
+  const end = STORE.VW / 2 + visualWidth / 2;
 
   const travelDistance = end - start;
-  const degPerPixel = 360 / circumference;
+  const degPerPixel = 360 / (width * Math.PI);
 
-  const preDistance = travelDistance * preProgress;
-  const pinDistance = travelDistance - preDistance;
-
-  return {
-    visualWidth: width,
+  GEOMETRY_STATE.geo = {
     start,
     end,
     travelDistance,
     degPerPixel,
-    preDistance,
-    pinDistance,
+    pinDistance: travelDistance * (1 - PRE_PROGRESS),
   };
+
+  GEOMETRY_STATE.boxHeight = contentBox.getBoundingClientRect().height;
+}
+
+function initOnce({ svg, contentBox }) {
+  if (GEOMETRY_STATE.isInit) return;
+  GEOMETRY_STATE.isInit = true;
+
+  const update = () => computeGeometry({ svg, contentBox });
+
+  update(); // initial
+
+  ScrollTrigger.addEventListener("refreshInit", update);
 }
 
 // Make animation functions
@@ -56,14 +74,7 @@ function createWheelRotateAnimation(motionConfig = {}) {
   }
 
   const { scrub, moveYWheel } = motionConfig;
-  const PRE_PROGRESS = 0.2;
-  const BOX_END_AT = 0.9;
-  const PRE_BOX_PROGRESS = BOX_END_AT * PRE_PROGRESS;
-  const SCALE = 0.8;
-
-  const getWheelInfo = () =>
-    getWheelGeometry({ svg, preProgress: PRE_PROGRESS });
-  const getBoxH = () => contentBox.getBoundingClientRect().height;
+  initOnce({ svg, contentBox });
 
   // ================== TIMELINE ==================
   gsap.set(wheel, { transformOrigin: "50% 50%", scale: SCALE });
@@ -78,19 +89,17 @@ function createWheelRotateAnimation(motionConfig = {}) {
 
   boxTl.fromTo(
     contentBox,
-    { y: () => STORE.VH + getBoxH() },
-    { y: () => -getBoxH() * 2 },
+    { y: () => STORE.VH + GEOMETRY_STATE.boxHeight },
+    { y: () => -GEOMETRY_STATE.boxHeight * 2 },
     0
   );
   wheelTl.fromTo(
     wheel,
-    { x: () => getWheelInfo().start, rotation: 0, y: `+=${moveYWheel}` },
+    { x: () => GEOMETRY_STATE.geo.start, rotation: 0, y: `+=${moveYWheel}` },
     {
-      x: () => getWheelInfo().end,
-      rotation: () => {
-        const geo = getWheelInfo();
-        return geo.travelDistance * geo.degPerPixel;
-      },
+      x: () => GEOMETRY_STATE.geo.end,
+      rotation: () =>
+        GEOMETRY_STATE.geo.travelDistance * GEOMETRY_STATE.geo.degPerPixel,
       y: `-=${moveYWheel}`,
     },
     0
@@ -101,6 +110,7 @@ function createWheelRotateAnimation(motionConfig = {}) {
     start: "top 80%",
     end: () => `top top`,
     scrub: scrub,
+    invalidateOnRefresh: true,
     onUpdate: (self) => {
       const wheelProgress = self.progress * PRE_PROGRESS;
       const boxProgress = self.progress * PRE_BOX_PROGRESS;
@@ -112,10 +122,7 @@ function createWheelRotateAnimation(motionConfig = {}) {
   ScrollTrigger.create({
     trigger: section,
     start: "top top",
-    end: () => {
-      const geo = getWheelInfo();
-      return `+=${geo.pinDistance}`;
-    },
+    end: () => `+=${GEOMETRY_STATE.geo.pinDistance}`,
     scrub: scrub,
     pin: true,
     pinSpacing: true,
