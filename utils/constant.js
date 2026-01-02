@@ -5,9 +5,10 @@ export const BREAKPOINT = {
   LARGE_DESKTOP: "large_desktop",
 };
 
-export const DIRECTION = {
-  VERTICAL: "vertical",
-  HORIZON: "horizon",
+export const GSAPCONFIG = {
+  SCRUB: 0.5,
+  EASE: "none",
+  SLIT_TEXT_EASE: "cubic-bezier(0.76, 0, 0.24, 1)",
 };
 
 export const VIEWPORTRULES = [
