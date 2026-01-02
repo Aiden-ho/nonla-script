@@ -1,5 +1,9 @@
 import { GsapSetup } from "./utils/gsapConfig.js";
-import { checkMotionReduce, createRafDebouncer } from "./utils/helpers.js";
+import {
+  checkMotionReduce,
+  createRafDebouncer,
+  requestSTRefresh,
+} from "./utils/helpers.js";
 import { VIEWPORTRULES } from "./utils/constant.js";
 import {
   triggerPlayVideo,
@@ -14,6 +18,8 @@ import { initMomentsRope } from "./modules/calcRolePosition.js";
 import { expandVideoSectionInit } from "./modules/expandVideosection.js";
 import { drawerMaterialsInit } from "./modules/drawerMaterialsSection.js";
 import { VariantSectionInit } from "./modules/3DvariantsSection.js";
+import { revealMapInit } from "./modules/revealMapSection.js";
+import { footerInit } from "./modules/footerSection.js";
 
 const animationModules = [
   slittingHeroSectionInit,
@@ -23,9 +29,9 @@ const animationModules = [
   expandVideoSectionInit,
   drawerMaterialsInit,
   VariantSectionInit,
+  revealMapInit,
+  footerInit,
 ];
-
-const requestSTRefresh = createRafDebouncer(() => ScrollTrigger.refresh());
 
 function initOnce() {
   //observer resize
@@ -52,8 +58,8 @@ function initOnce() {
 }
 
 function initPage() {
-  GsapSetup();
   initOnce();
+  GsapSetup();
   initMomentsRope();
   triggerPlayVideo();
   updateViewport();
@@ -81,4 +87,4 @@ function initPage() {
   requestSTRefresh();
 }
 
-document.addEventListener("DOMContentLoaded", () => initPage());
+window.addEventListener("load", () => initPage());
