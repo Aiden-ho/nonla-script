@@ -1,6 +1,6 @@
 import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
 import { getMotionOptByViewport, warn } from "../utils/helpers.js";
-console.log(GSAPCONFIG);
+
 const ROOT_DOM = {
   intro: '[data-slit="intro"]',
   hero: '[data-slit="hero"]',
