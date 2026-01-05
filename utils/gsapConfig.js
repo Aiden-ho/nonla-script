@@ -1,7 +1,7 @@
 let lenis;
 
 export function GsapSetup() {
-  gsap.registerPlugin(ScrollTrigger, SplitText);
+  gsap.registerPlugin(ScrollTrigger, SplitText, Flip);
 
   if (lenis) return lenis;
 
