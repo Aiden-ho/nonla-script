@@ -15,6 +15,50 @@ const OVERRIDE_OPT = {
   [BREAKPOINT.MOBILE]: null,
 };
 let horizonTL = null;
+let isInit = false;
+
+function getDom() {
+  const wrapper = document.querySelector(ROOT_DOM.wrapper);
+
+  if (!wrapper) {
+    warn("[horizonScrollAbout]", "Missing ROOT DOM", { wrapper });
+    return null;
+  }
+
+  const tracker = wrapper.querySelector('[data-horizon="tracker"]');
+  const progress = wrapper.querySelector('[data-horizon="progress"]');
+  const progress_value = progress?.querySelector("div");
+
+  if (!tracker || !progress || !progress_value) {
+    warn("[horizonScrollAbout]", "Missing ROOT DOM", {
+      tracker,
+      progress,
+      progress_value,
+    });
+    return null;
+  }
+
+  return {
+    wrapper,
+    tracker,
+    progress,
+    progress_value,
+  };
+}
+
+function initOnce() {
+  if (isInit) return;
+  isInit = true;
+
+  const dom = getDom();
+  if (dom === null) return;
+  const { tracker } = dom;
+
+  gsap.set(tracker, {
+    willChange: "transform",
+    transform: "translateZ(0)",
+  });
+}
 
 function killHorizon() {
   horizonTL?.scrollTrigger?.kill(true);
@@ -35,25 +79,9 @@ function getScrollAmount(wrapper, tracker) {
 
 // Make animation functions
 function createSlideScrollAnimation(motionConfig = {}) {
-  const wrapper = document.querySelector(ROOT_DOM.wrapper);
-
-  if (!wrapper) {
-    warn("[horizonScrollAbout]", "Missing ROOT DOM", { wrapper });
-    return null;
-  }
-
-  const tracker = wrapper.querySelector('[data-horizon="tracker"]');
-  const progress = wrapper.querySelector('[data-horizon="progress"]');
-  const progress_value = progress?.querySelector("div");
-
-  if (!tracker || !progress || !progress_value) {
-    warn("[horizonScrollAbout]", "Missing ROOT DOM", {
-      tracker,
-      progress,
-      progress_value,
-    });
-    return null;
-  }
+  const dom = getDom();
+  if (dom === null) return;
+  const { wrapper, tracker, progress_value } = dom;
 
   const { scrub, ease, holdEnd } = motionConfig;
 
@@ -103,6 +131,7 @@ export function horizonScrollAboutInit(config = {}) {
     DEFAULT_OPT,
     OVERRIDE_OPT
   );
+  initOnce();
 
   if (motionConfig === null) {
     killHorizon();

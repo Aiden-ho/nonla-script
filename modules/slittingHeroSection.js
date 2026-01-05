@@ -27,7 +27,9 @@ const OVERRIDE_OPT = {
   },
 };
 
-function createSlittingHeroAnimation(motionConfig = {}) {
+let isInit = false;
+
+function getDom() {
   const wrapper = document.querySelector(ROOT_DOM.wrapper);
 
   if (!wrapper) {
@@ -47,6 +49,28 @@ function createSlittingHeroAnimation(motionConfig = {}) {
     });
     return null;
   }
+
+  return { intro, hero, headingIntro, wrapper };
+}
+
+function initOnce() {
+  if (isInit) return;
+  isInit = true;
+
+  const dom = getDom();
+  if (dom === null) return;
+  const { intro } = dom;
+
+  gsap.set(intro, {
+    willChange: "clip-path",
+    transform: "translateZ(0)",
+  });
+}
+
+function createSlittingHeroAnimation(motionConfig = {}) {
+  const dom = getDom();
+  if (dom === null) return;
+  const { intro, hero, headingIntro, wrapper } = dom;
 
   const { scrub, ease, start, end, duration, hold } = motionConfig;
 
@@ -84,5 +108,6 @@ export function slittingHeroSectionInit(config = {}) {
     OVERRIDE_OPT
   );
 
+  initOnce();
   createSlittingHeroAnimation(motionConfig);
 }

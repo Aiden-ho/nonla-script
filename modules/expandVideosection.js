@@ -17,8 +17,9 @@ const OVERRIDE_OPT = {
   },
 };
 
-// Make animation functions
-function expandVideoAnimation(motionConfig = {}) {
+let isInit = false;
+
+function getDom() {
   const videoSection = document.querySelector('[data-video="section"]');
 
   if (!videoSection) {
@@ -53,6 +54,45 @@ function expandVideoAnimation(motionConfig = {}) {
     });
     return null;
   }
+
+  return {
+    videoSection,
+    introHeading,
+    introText,
+    videoEl,
+    introContent,
+    introBg,
+    videoCotent,
+  };
+}
+
+function initOnce() {
+  if (isInit) return;
+  isInit = true;
+
+  const dom = getDom();
+  if (dom === null) return;
+  const { introHeading, videoCotent, introBg } = dom;
+
+  gsap.set([introHeading, videoCotent, introBg], {
+    willChange: "transform, scale",
+    transform: "translateZ(0)",
+  });
+}
+
+// Make animation functions
+function expandVideoAnimation(motionConfig = {}) {
+  const dom = getDom();
+  if (dom === null) return;
+
+  const {
+    videoSection,
+    introHeading,
+    introText,
+    introContent,
+    introBg,
+    videoCotent,
+  } = dom;
 
   const { scrollFactor, scrub, DUR, ease } = motionConfig;
 
@@ -129,6 +169,6 @@ export function expandVideoSectionInit(config = {}) {
     DEFAULT_OPT,
     OVERRIDE_OPT
   );
-
+  initOnce();
   expandVideoAnimation(motionConfig);
 }
