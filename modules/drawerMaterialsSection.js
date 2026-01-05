@@ -59,6 +59,15 @@ function initEventOnce() {
 
     closeItem(item);
   });
+
+  ScrollTrigger.addEventListener("refresh", () => {
+    if (!state.activeItem) return;
+
+    const item = state.activeItem;
+    state.activeItem = null;
+
+    closeItem(item);
+  });
 }
 
 function getItemDOM(item) {
