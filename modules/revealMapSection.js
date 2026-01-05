@@ -103,18 +103,18 @@ function createRevealMapAnimation(dom = {}, motionConfig = {}) {
 
   tl.from(headinngSpit.lines, {
     yPercent: 115,
-    duration: 1.2,
+    duration: 0.5,
     ease: GSAPCONFIG.SLIT_TEXT_EASE,
     stagger: 0.04,
   })
     .from(textSpit.lines, {
       yPercent: 115,
-      duration: 1,
+      duration: 0.5,
       ease: GSAPCONFIG.SLIT_TEXT_EASE,
       stagger: 0.04,
     })
-    .to(map, { autoAlpha: 1, duration: 0.5 })
-    .to(action, { autoAlpha: 1, duration: 0.5 });
+    .to(map, { autoAlpha: 1, duration: 0.3 })
+    .to(action, { autoAlpha: 1, duration: 0.3 });
 }
 
 function initEventOnce(dom = {}) {
