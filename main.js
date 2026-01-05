@@ -20,6 +20,8 @@ import { drawerMaterialsInit } from "./modules/drawerMaterialsSection.js";
 import { VariantSectionInit } from "./modules/3DvariantsSection.js";
 import { revealMapInit } from "./modules/revealMapSection.js";
 import { footerInit } from "./modules/footerSection.js";
+import { customScrollInit, refreshThumbY } from "./modules/customScroll.js";
+import { loadingScreenInit } from "./modules/loadingScreen.js";
 
 const animationModules = [
   slittingHeroSectionInit,
@@ -63,6 +65,9 @@ function initPage() {
   initMomentsRope();
   triggerPlayVideo();
   updateViewport();
+  refreshThumbY();
+  customScrollInit();
+  loadingScreenInit();
   const isMotionReduce = checkMotionReduce();
   const mm = gsap.matchMedia();
 
