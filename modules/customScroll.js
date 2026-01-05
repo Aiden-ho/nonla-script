@@ -1,4 +1,4 @@
-import { warn } from "../utils/helpers.js";
+import { warn, requestSTRefresh } from "../utils/helpers.js";
 import { createResizeObserver } from "../utils/observeHelper.js";
 import { getLenis } from "../utils/gsapConfig.js";
 import { STORE } from "../utils/globalStore.js";
@@ -107,4 +107,18 @@ export function refreshThumbY(lenis) {
   if (thumb) {
     thumb.style.transform = `translate3d(0, ${y}px, 0)`;
   }
+}
+
+export function scrollToTop() {
+  const lenis = getLenis();
+  lenis.stop();
+  lenis.scrollTo(0, {
+    immediate: true,
+    force: true,
+    onComplete: () => {
+      refreshThumbY(lenis);
+      requestSTRefresh();
+      lenis.start();
+    },
+  });
 }

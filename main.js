@@ -1,9 +1,5 @@
 import { GsapSetup } from "./utils/gsapConfig.js";
-import {
-  checkMotionReduce,
-  createRafDebouncer,
-  requestSTRefresh,
-} from "./utils/helpers.js";
+import { checkMotionReduce, requestSTRefresh } from "./utils/helpers.js";
 import { VIEWPORTRULES } from "./utils/constant.js";
 import {
   triggerPlayVideo,
@@ -20,7 +16,7 @@ import { drawerMaterialsInit } from "./modules/drawerMaterialsSection.js";
 import { VariantSectionInit } from "./modules/3DvariantsSection.js";
 import { revealMapInit } from "./modules/revealMapSection.js";
 import { footerInit } from "./modules/footerSection.js";
-import { customScrollInit, refreshThumbY } from "./modules/customScroll.js";
+import { customScrollInit, scrollToTop } from "./modules/customScroll.js";
 import { loadingScreenInit } from "./modules/loadingScreen.js";
 
 const animationModules = [
@@ -65,8 +61,8 @@ function initPage() {
   initMomentsRope();
   triggerPlayVideo();
   updateViewport();
-  refreshThumbY();
   customScrollInit();
+  scrollToTop();
   loadingScreenInit();
   const isMotionReduce = checkMotionReduce();
   const mm = gsap.matchMedia();
