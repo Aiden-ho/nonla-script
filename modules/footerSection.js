@@ -1,5 +1,6 @@
 import { getLenis } from "../utils/gsapConfig.js";
-import { warn } from "../utils/helpers.js";
+import { warn, requestSTRefresh } from "../utils/helpers.js";
+import { refreshThumbY } from "../modules/customScroll.js";
 
 const ROOT_DOM = {
   section: "[data-footer='section']",
@@ -7,15 +8,7 @@ const ROOT_DOM = {
   footerMiddleText: "[data-footer='middle-text']",
   footerMiddleImg: "[data-footer='middle-img']",
   footerHeading: "[data-footer='heading']",
-};
-
-const TO_TOP_DOM = {
-  section: "[data-toTop='section']",
-  content: "[data-toTop='content']",
-  headingWrapper: "[data-toTop='heading-wrapper']",
-  headingInverse: "[data-toTop='heading-inverse']",
-  heading: "[data-toTop='heading']",
-  trigger: "[data-toTop='trigger']",
+  triggerToTop: "[data-totop='trigger']",
 };
 
 const state = {
@@ -34,13 +27,21 @@ function getRootDom() {
   const footerMiddleText = section.querySelector(ROOT_DOM.footerMiddleText);
   const footerImg = section.querySelector(ROOT_DOM.footerMiddleImg);
   const footerHeading = section.querySelector(ROOT_DOM.footerHeading);
+  const triggerToTop = section.querySelector(ROOT_DOM.triggerToTop);
 
-  if (!footerTop || !footerMiddleText || !footerImg || !footerHeading) {
+  if (
+    !footerTop ||
+    !footerMiddleText ||
+    !footerImg ||
+    !footerHeading ||
+    !triggerToTop
+  ) {
     warn("[footerSection]", "Missing ROOT DOM", {
       footerTop,
       footerMiddleText,
       footerImg,
       footerHeading,
+      triggerToTop,
     });
     return null;
   }
@@ -51,76 +52,32 @@ function getRootDom() {
     footerMiddleText,
     footerImg,
     footerHeading,
+    triggerToTop,
   };
 }
 
-function getToTopDom() {
-  const section = document.querySelector(TO_TOP_DOM.section);
-
-  if (!section) {
-    warn("[footerSection]", "Missing TO TOP DOM", { section });
-    return null;
-  }
-
-  const content = section.querySelector(TO_TOP_DOM.content);
-  const headingWrapper = section.querySelector(TO_TOP_DOM.headingWrapper);
-  const headingInverse = section.querySelector(TO_TOP_DOM.headingInverse);
-  const heading = section.querySelector(TO_TOP_DOM.heading);
-  const trigger = document.querySelector(TO_TOP_DOM.trigger);
-
-  if (!content || !headingWrapper || !headingInverse || !heading || !trigger) {
-    warn("[footerSection]", "Missing TO TOP DOM", {
-      content,
-      headingWrapper,
-      headingInverse,
-      trigger,
-    });
-    return null;
-  }
-
-  return {
-    content,
-    headingWrapper,
-    headingInverse,
-    trigger,
-    section,
-  };
-}
-
-function initOnce() {
+function initOnce(dom = {}) {
   if (state.isInit) return;
   state.isInit = true;
 
-  const toTopDom = getToTopDom();
-  if (toTopDom === null) return;
-
-  const { content, headingWrapper, headingInverse, trigger, section } =
-    getToTopDom();
-
   const lenis = getLenis();
+  const { triggerToTop } = dom;
 
-  trigger.addEventListener("click", function () {
+  triggerToTop.addEventListener("click", () => {
     lenis.stop();
-    const tl = gsap.timeline();
-
-    tl.to(section, { autoAlpha: 1, duration: 0.4 });
-    tl.call(() => {
-      lenis.scrollTo(0, {
-        immediate: true,
-        force: true,
-      });
+    lenis.scrollTo(0, {
+      immediate: true,
+      force: true,
+      onComplete: () => {
+        refreshThumbY(lenis);
+        requestSTRefresh();
+        lenis.start();
+      },
     });
-    // tl.to(section, { autoAlpha: 0, duration: 0.4 });
-    // tl.call(() => {
-    //   lenis.start();
-    // });
   });
 }
 
-function createFooterAnimation() {
-  const dom = getRootDom();
-  if (dom === null) return;
-
+function createFooterAnimation(dom = {}) {
   const { section, footerTop, footerMiddleText, footerImg, footerHeading } =
     dom;
 
@@ -168,6 +125,10 @@ function createFooterAnimation() {
 
 export function footerInit(config = {}) {
   const { viewportName } = config;
-  initOnce();
-  createFooterAnimation();
+
+  const dom = getRootDom();
+  if (dom === null) return;
+
+  initOnce(dom);
+  createFooterAnimation(dom);
 }
