@@ -29,7 +29,7 @@ function computeGeometry({ svg, contentBox }) {
   const visualWidth = width * SCALE;
 
   const start = -(STORE.VW / 2 + visualWidth / 2);
-  const end = STORE.VW / 2 + visualWidth / 2;
+  const end = STORE.VW / 2 + visualWidth;
 
   const travelDistance = end - start;
   const degPerPixel = 360 / (width * Math.PI);

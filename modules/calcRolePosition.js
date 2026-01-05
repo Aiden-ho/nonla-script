@@ -22,8 +22,8 @@ const ROPE_SPECS = {
     minScale: 0.5,
   },
   [BREAKPOINT.LARGE_DESKTOP]: {
-    outerGap: 300,
-    baseScale: 1.2,
+    outerGap: 200,
+    baseScale: 1.1,
     minInnerGap: 8,
     minScale: 0.5,
   },
