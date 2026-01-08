@@ -1,6 +1,6 @@
 import { getLenis } from "../utils/gsapConfig.js";
-import { warn, requestSTRefresh } from "../utils/helpers.js";
-import { refreshThumbY, scrollToTop } from "../modules/customScroll.js";
+import { warn } from "../utils/helpers.js";
+import { scrollToTop } from "../modules/customScroll.js";
 
 const ROOT_DOM = {
   section: "[data-footer='section']",
@@ -65,16 +65,6 @@ function initOnce(dom = {}) {
 
   triggerToTop.addEventListener("click", () => {
     scrollToTop();
-    // lenis.stop();
-    // lenis.scrollTo(0, {
-    //   immediate: true,
-    //   force: true,
-    //   onComplete: () => {
-    //     refreshThumbY(lenis);
-    //     requestSTRefresh();
-    //     lenis.start();
-    //   },
-    // });
   });
 }
 

@@ -16,7 +16,7 @@ import { drawerMaterialsInit } from "./modules/drawerMaterialsSection.js";
 import { VariantSectionInit } from "./modules/3DvariantsSection.js";
 import { revealMapInit } from "./modules/revealMapSection.js";
 import { footerInit } from "./modules/footerSection.js";
-import { customScrollInit, scrollToTop } from "./modules/customScroll.js";
+import { scrollToTop } from "./modules/customScroll.js";
 import { loadingScreenInit } from "./modules/loadingScreen.js";
 
 const animationModules = [
@@ -61,7 +61,6 @@ function initPage() {
   initMomentsRope();
   triggerPlayVideo();
   updateViewport();
-  customScrollInit();
   scrollToTop();
   loadingScreenInit();
   const isMotionReduce = checkMotionReduce();
