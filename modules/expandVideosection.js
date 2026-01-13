@@ -7,20 +7,40 @@ const DEFAULT_OPT = {
   scrollFactor: 3,
   scrub: GSAPCONFIG.SCRUB,
   ease: GSAPCONFIG.EASE,
-  DUR: { startAt: 0.05, textDone: 0.1, headingDone: 0.85, videoDone: 0.9 },
+  PHASE: {
+    introStart: 0,
+    introEnd: 0.15,
+    mainStart: 0.2,
+    mainEnd: 0.95,
+    textEnd: 0.25,
+  },
 };
 const OVERRIDE_OPT = {
   [BREAKPOINT.MOBILE]: {
     ...DEFAULT_OPT,
     scrollFactor: 2,
-    DUR: { startAt: 0.02, textDone: 0.06, headingDone: 0.85, videoDone: 0.9 },
+    PHASE: {
+      introStart: 0,
+      introEnd: 0.1,
+      mainStart: 0.12,
+      mainEnd: 0.9,
+      textEnd: 0.18,
+    },
   },
 };
 
-let isInit = false;
+const ROOT_DOM = {
+  videoSection: '[data-video="section"]',
+  introBg: '[data-video="intro-bg"]',
+  bgEl: "img",
+  videoCotent: '[data-video="content"]',
+  introHeading: '[data-video="heading"]',
+  introText: '[data-video="text"]',
+  videoEl: "video",
+};
 
 function getDom() {
-  const videoSection = document.querySelector('[data-video="section"]');
+  const videoSection = document.querySelector(ROOT_DOM.videoSection);
 
   if (!videoSection) {
     warn("[expandVideoSection]", "Missing ROOT DOM", { videoSection });
@@ -30,21 +50,23 @@ function getDom() {
   const introContent = videoSection.querySelector(
     '[data-video="intro-content"]'
   );
-  const introBg = videoSection.querySelector('[data-video="intro-bg"]');
-  const videoCotent = videoSection.querySelector('[data-video="content"]');
+  const introBg = videoSection.querySelector(ROOT_DOM.introBg);
+  const videoCotent = videoSection.querySelector(ROOT_DOM.videoCotent);
+  const bgEl = videoSection.querySelector(ROOT_DOM.bgEl);
 
-  if (!introContent || !introBg || !videoCotent) {
-    warn("[expandVideoSection]", "Missing ROOT DOM", {
+  if (!videoCotent || !introBg || !bgEl || !introContent) {
+    warn("[expandVideoSection]", "Missing INTRO DOM", {
+      videoCotent,
       introContent,
       introBg,
-      videoCotent,
+      bgEl,
     });
     return null;
   }
 
-  const introHeading = gsap.utils.toArray('[data-video="heading"]');
-  const introText = introContent.querySelector('[data-video="text"]');
-  const videoEl = videoCotent.querySelector("video");
+  const introHeading = gsap.utils.toArray(ROOT_DOM.introHeading);
+  const introText = introContent.querySelector(ROOT_DOM.introText);
+  const videoEl = videoCotent.querySelector(ROOT_DOM.videoEl);
 
   if (!introHeading.length || !introText || !videoEl) {
     warn("[expandVideoSection]", "Missing CONTENT DOM", {
@@ -57,34 +79,18 @@ function getDom() {
 
   return {
     videoSection,
+    videoCotent,
+    introContent,
+    introBg,
+    bgEl,
     introHeading,
     introText,
     videoEl,
-    introContent,
-    introBg,
-    videoCotent,
   };
 }
 
-function initOnce() {
-  if (isInit) return;
-  isInit = true;
-
-  const dom = getDom();
-  if (dom === null) return;
-  const { introHeading, videoCotent, introBg } = dom;
-
-  gsap.set([introHeading, videoCotent, introBg], {
-    willChange: "transform, scale",
-    transform: "translateZ(0)",
-  });
-}
-
 // Make animation functions
-function expandVideoAnimation(motionConfig = {}) {
-  const dom = getDom();
-  if (dom === null) return;
-
+export function expandVideoAnimation(dom, motionConfig = {}) {
   const {
     videoSection,
     introHeading,
@@ -92,83 +98,96 @@ function expandVideoAnimation(motionConfig = {}) {
     introContent,
     introBg,
     videoCotent,
+    bgEl,
   } = dom;
+  const { scrub, ease, PHASE } = motionConfig;
 
-  const { scrollFactor, scrub, DUR, ease } = motionConfig;
+  const getMoveX = () => window.innerWidth * 0.5;
+
+  gsap.set([videoCotent, introBg, ...introHeading], {
+    force3D: true,
+    willChange: "transform",
+  });
 
   gsap.set(videoCotent, { scale: 0 });
-  gsap.set(introText, { overflow: "hidden" });
   gsap.set(introContent, { opacity: 0 });
+  gsap.set(bgEl, { yPercent: 120, scale: 0.8 });
 
-  gsap.to(introContent, {
-    opacity: 1,
-    scrollTrigger: {
-      trigger: videoSection,
-      start: "top 20%",
-      end: "top top",
-      scrub: true,
-      invalidateOnRefresh: true,
-    },
-  });
-
-  let moveXMax = STORE.VW * 0.5;
-
-  const tl = gsap.timeline({
+  const st = ScrollTrigger.create({
     defaults: { ease },
-    scrollTrigger: {
-      trigger: videoSection,
-      start: "top top",
-      end: () => `+=${STORE.VH * scrollFactor}px`,
-      pin: true,
-      pinSpacing: true,
-      scrub,
-      invalidateOnRefresh: true,
-      onRefresh: () => {
-        moveXMax = STORE.VW * 0.5;
-      },
+    trigger: videoSection,
+    start: "top top",
+    end: () => `+=200%`,
+    pin: true,
+    scrub: scrub,
+    invalidateOnRefresh: true,
+    onUpdate: (self) => {
+      const progress = self.progress;
+
+      // --- PHASE 1: INTRO (0 -> 0.15) ---
+      const introProgress = gsap.utils.clamp(
+        0,
+        1,
+        gsap.utils.normalize(PHASE.introStart, PHASE.introEnd, progress)
+      );
+
+      gsap.set(introContent, { opacity: introProgress });
+      gsap.set(bgEl, {
+        yPercent: (1 - introProgress) * 120,
+        scale: 0.8 + introProgress * 0.2,
+      });
+
+      // --- PHASE 2: MAIN ANIMATION (0.20 -> 0.80) ---
+      const mainProgress = gsap.utils.clamp(
+        0,
+        1,
+        gsap.utils.normalize(PHASE.mainStart, PHASE.mainEnd, progress)
+      );
+
+      // Scale Video (Giờ đây khi mainP = 0, video chắc chắn scale = 0)
+      gsap.set(videoCotent, { scale: mainProgress });
+      gsap.set(introBg, { scale: 1 - mainProgress });
+
+      // Headings
+      introHeading.forEach((el, i) => {
+        const dir = i === 0 ? -1 : 1;
+        gsap.set(el, { x: dir * mainProgress * getMoveX() });
+      });
+
+      // Text
+      const textP = gsap.utils.clamp(
+        0,
+        1,
+        gsap.utils.normalize(PHASE.mainStart, PHASE.textEnd, progress)
+      );
+      gsap.set(introText, {
+        opacity: 1 - textP,
+        height: introText.offsetHeight * (1 - textP),
+      });
     },
   });
-  tl.to(
-    introHeading,
-    {
-      x: (i) => {
-        const dir = i === 0 ? -1 : 1;
-        return dir * moveXMax;
-      },
-      duration: DUR.headingDone - DUR.startAt,
-    },
-    DUR.startAt
-  );
-  tl.to(
-    introText,
-    {
-      autoAlpha: 0,
-      height: 0,
-      duration: DUR.textDone - DUR.startAt,
-    },
-    DUR.startAt
-  );
-  tl.to(
-    videoCotent,
-    { scale: 1, duration: DUR.videoDone - DUR.startAt },
-    DUR.startAt
-  );
-  tl.to(
-    introBg,
-    { scale: 0, duration: DUR.videoDone - DUR.startAt },
-    DUR.startAt
-  );
-  tl.to({}, { duration: 0.1 });
+
+  return () => {
+    st?.kill();
+    gsap.set(
+      [videoCotent, introContent, bgEl, introText, introBg, ...introHeading],
+      {
+        clearProps: "all",
+      }
+    );
+  };
 }
 
 export function expandVideoSectionInit(config = {}) {
   const { viewportName } = config;
+  const dom = getDom();
+  if (dom === null) return;
 
   const motionConfig = getMotionOptByViewport(
     viewportName,
     DEFAULT_OPT,
     OVERRIDE_OPT
   );
-  initOnce();
-  expandVideoAnimation(motionConfig);
+
+  return expandVideoAnimation(dom, motionConfig);
 }

@@ -14,8 +14,6 @@ const DEFAULT_OPT = {
 const OVERRIDE_OPT = {
   [BREAKPOINT.MOBILE]: null,
 };
-let horizonTL = null;
-let isInit = false;
 
 function getDom() {
   const wrapper = document.querySelector(ROOT_DOM.wrapper);
@@ -46,49 +44,20 @@ function getDom() {
   };
 }
 
-function initOnce() {
-  if (isInit) return;
-  isInit = true;
-
-  const dom = getDom();
-  if (dom === null) return;
-  const { tracker } = dom;
-
-  gsap.set(tracker, {
-    willChange: "transform",
-    transform: "translateZ(0)",
-  });
-}
-
-function killHorizon() {
-  horizonTL?.scrollTrigger?.kill(true);
-  horizonTL?.kill();
-  horizonTL = null;
-}
-
-function getScrollAmount(wrapper, tracker) {
-  const wrapperSize = wrapper.clientWidth;
-  const trackSize = tracker.scrollWidth;
-
-  const diff = trackSize - wrapperSize;
-
-  if (diff <= 0) return 0;
-
-  return -diff; // âm để slide theo chiều ngược scroll
-}
-
 // Make animation functions
-function createSlideScrollAnimation(motionConfig = {}) {
-  const dom = getDom();
-  if (dom === null) return;
+function createSlideScrollAnimation(dom, motionConfig = {}) {
   const { wrapper, tracker, progress_value } = dom;
-
   const { scrub, ease, holdEnd } = motionConfig;
 
-  const getAmount = () => getScrollAmount(wrapper, tracker);
-  const getDistance = () => Math.abs(getAmount());
+  // gsap.set(tracker, { force3D: true, willChange: "transform", z: 0.01 });
+
+  const getAmount = () => {
+    const diff = tracker.scrollWidth - wrapper.clientWidth;
+    return diff > 0 ? -diff : 0;
+  };
+
   const mainDuration = 1;
-  const scroll_ratio = mainDuration + holdEnd;
+  const scrollRatio = mainDuration + holdEnd;
 
   const tl = gsap.timeline({
     defaults: {
@@ -97,7 +66,7 @@ function createSlideScrollAnimation(motionConfig = {}) {
     scrollTrigger: {
       trigger: wrapper,
       start: "top top",
-      end: () => `+=${getDistance() * scroll_ratio}`,
+      end: () => `+=${Math.abs(getAmount()) * scrollRatio}`,
       pin: true,
       pinSpacing: true,
       scrub,
@@ -109,6 +78,7 @@ function createSlideScrollAnimation(motionConfig = {}) {
   tl.to(tracker, {
     x: () => getAmount(),
     duration: mainDuration,
+    lazy: true,
   }).to(
     progress_value,
     {
@@ -119,25 +89,27 @@ function createSlideScrollAnimation(motionConfig = {}) {
     "<"
   );
   tl.to({}, { duration: holdEnd });
-
   return tl;
 }
 
 export function horizonScrollAboutInit(config = {}) {
   const { viewportName } = config;
+  const dom = getDom();
+  if (dom === null) return;
 
   const motionConfig = getMotionOptByViewport(
     viewportName,
     DEFAULT_OPT,
     OVERRIDE_OPT
   );
-  initOnce();
 
-  if (motionConfig === null) {
-    killHorizon();
-    return;
-  }
+  if (!motionConfig) return;
+  const tl = createSlideScrollAnimation(dom, motionConfig);
 
-  killHorizon();
-  horizonTL = createSlideScrollAnimation(motionConfig);
+  return () => {
+    tl.scrollTrigger?.kill();
+    tl.kill();
+
+    gsap.set([dom.tracker, dom.progress_value], { clearProps: "all" });
+  };
 }
