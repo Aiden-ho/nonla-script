@@ -4,147 +4,119 @@ import { getMotionOptByViewport, warn } from "../utils/helpers.js";
 // Make animation functions
 const DEFAULT_OPT = {
   scrub: GSAPCONFIG.SCRUB,
-  moveYWheel: "220",
+  scale: 0.95,
 };
 const OVERRIDE_OPT = {
   [BREAKPOINT.MOBILE]: {
     ...DEFAULT_OPT,
-    moveYWheel: "0",
   },
 };
 
-const PRE_PROGRESS = 0.2;
-const BOX_END_AT = 0.9;
-const PRE_BOX_PROGRESS = BOX_END_AT * PRE_PROGRESS;
-const SCALE = 0.8;
-
-const GEOMETRY_STATE = {
-  geo: null,
-  boxHeight: 0,
-  isInit: false,
+const ROOT_DOM = {
+  section: '[data-wheel="section"]',
+  wheelBox: '[data-wheel="wheel"]',
+  contentBox: '[data-wheel="contentBox"]',
+  svg: "svg",
 };
 
-function computeGeometry({ svg, contentBox }) {
-  const width = svg.getBoundingClientRect().width;
-  const visualWidth = width * SCALE;
+function getDom() {
+  const section = document.querySelector(ROOT_DOM.section);
 
-  const start = -(STORE.VW / 2 + visualWidth / 2);
-  const end = STORE.VW / 2 + visualWidth / 2 + 70;
+  if (!section) {
+    warn("[wheelRotateMoment]", "Missing ROOT DOM", { section });
+    return null;
+  }
 
-  const travelDistance = end - start;
-  const degPerPixel = 360 / (width * Math.PI);
+  const wheelBox = section.querySelector(ROOT_DOM.wheelBox);
+  const contentBox = section.querySelector(ROOT_DOM.contentBox);
+  const svg = wheelBox.querySelector(ROOT_DOM.svg);
 
-  GEOMETRY_STATE.geo = {
-    start,
-    end,
-    travelDistance,
-    degPerPixel,
-    pinDistance: travelDistance * (1 - PRE_PROGRESS),
-  };
-
-  GEOMETRY_STATE.boxHeight = contentBox.getBoundingClientRect().height;
-}
-
-function initOnce({ svg, contentBox }) {
-  if (GEOMETRY_STATE.isInit) return;
-  GEOMETRY_STATE.isInit = true;
-
-  const update = () => computeGeometry({ svg, contentBox });
-
-  update(); // initial
-
-  ScrollTrigger.addEventListener("refreshInit", update);
-}
-
-// Make animation functions
-function createWheelRotateAnimation(motionConfig = {}) {
-  const wheel = document.querySelector('[data-wheel="wheel"]');
-  const contentBox = document.querySelector('[data-wheel="contentBox"]');
-  const section = document.querySelector('[data-wheel="section"]');
-  const svg = wheel.querySelector("svg");
-
-  if (!wheel || !section || !contentBox || !svg) {
+  if (!wheelBox || !contentBox || !svg) {
     warn("[wheelRotateMoment]", "Missing ROOT DOM", {
-      wheel,
+      wheelBox,
       contentBox,
-      section,
       svg,
     });
     return null;
   }
 
-  const { scrub, moveYWheel } = motionConfig;
-  initOnce({ svg, contentBox });
+  return {
+    section,
+    wheelBox,
+    contentBox,
+    svg,
+  };
+}
+
+// Make animation functions
+function createWheelRotateAnimation(dom, motionConfig = {}) {
+  const { section, wheelBox, contentBox, svg } = dom;
+  const { scrub, scale } = motionConfig;
+
+  const getMetrics = () => {
+    const svgWidth = svg.getBoundingClientRect().width * scale;
+    const contentHeight = contentBox.getBoundingClientRect().height;
+
+    return {
+      svgWidth,
+      contentHeight,
+      startX: -svgWidth * 1.8,
+      endX: svgWidth * 1.8,
+      rotation: (svgWidth * 3.6 * 360) / (svgWidth * Math.PI),
+    };
+  };
 
   // ================== TIMELINE ==================
-  gsap.set(wheel, { transformOrigin: "50% 50%", scale: SCALE });
-  const wheelTl = gsap.timeline({
-    default: { ease: GSAPCONFIG.EASE },
-    paused: true,
-  });
-  const boxTl = gsap.timeline({
-    default: { ease: GSAPCONFIG.EASE },
-    paused: true,
+  gsap.set(wheelBox, { transformOrigin: "50% 50%", scale });
+  gsap.set(contentBox, { y: () => getMetrics().contentHeight * 1.5 });
+  gsap.set(wheelBox, {
+    x: () => getMetrics().startX,
+    rotation: 0,
   });
 
-  boxTl.fromTo(
-    contentBox,
-    { y: () => STORE.VH + GEOMETRY_STATE.boxHeight },
-    { y: () => -GEOMETRY_STATE.boxHeight * 2 },
-    0
-  );
-  wheelTl.fromTo(
-    wheel,
-    { x: () => GEOMETRY_STATE.geo.start, rotation: 0, y: `+=${moveYWheel}` },
+  const tl = gsap.timeline({
+    defaults: { ease: GSAPCONFIG.EASE },
+    scrollTrigger: {
+      trigger: section,
+      start: "top top",
+      end: "+=200%",
+      scrub: scrub,
+      pin: true,
+      pinSpacing: true,
+      invalidateOnRefresh: true,
+    },
+  });
+
+  tl.to(contentBox, { y: () => -getMetrics().contentHeight * 1.5 }, 0);
+  tl.to(
+    wheelBox,
     {
-      x: () => GEOMETRY_STATE.geo.end,
-      rotation: () =>
-        GEOMETRY_STATE.geo.travelDistance * GEOMETRY_STATE.geo.degPerPixel,
-      y: `-=${moveYWheel}`,
+      x: () => getMetrics().endX,
+      rotation: () => getMetrics().rotation,
     },
-    0
+    "<",
   );
-
-  ScrollTrigger.create({
-    trigger: section,
-    start: "top 80%",
-    end: () => `top top`,
-    scrub: scrub,
-    invalidateOnRefresh: true,
-    onUpdate: (self) => {
-      const wheelProgress = self.progress * PRE_PROGRESS;
-      const boxProgress = self.progress * PRE_BOX_PROGRESS;
-      wheelTl.progress(wheelProgress);
-      boxTl.progress(boxProgress);
-    },
-  });
-
-  ScrollTrigger.create({
-    trigger: section,
-    start: "top top",
-    end: () => `+=${GEOMETRY_STATE.geo.pinDistance}`,
-    scrub: scrub,
-    pin: true,
-    pinSpacing: true,
-    invalidateOnRefresh: true,
-    onUpdate: (self) => {
-      const wheelProgress = PRE_PROGRESS + self.progress * (1 - PRE_PROGRESS);
-      const boxProgress =
-        PRE_BOX_PROGRESS + self.progress * (BOX_END_AT - PRE_BOX_PROGRESS);
-      wheelTl.progress(wheelProgress);
-      boxTl.progress(boxProgress);
-    },
-  });
+  return tl;
 }
 
 export function wheelRotateMomentSectionInit(config = {}) {
   const { viewportName } = config;
 
+  const dom = getDom();
+  if (!dom) return;
+
   const motionConfig = getMotionOptByViewport(
     viewportName,
     DEFAULT_OPT,
-    OVERRIDE_OPT
+    OVERRIDE_OPT,
   );
 
-  createWheelRotateAnimation(motionConfig);
+  const tl = createWheelRotateAnimation(dom, motionConfig);
+
+  return () => {
+    tl.scrollTrigger?.kill();
+    tl.kill();
+
+    gsap.set([dom.wheelBox, dom.contentBox], { clearProps: "all" });
+  };
 }
