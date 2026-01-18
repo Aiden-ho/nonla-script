@@ -1,6 +1,6 @@
-import { createRafDebouncer, warn } from "../utils/helpers.js";
-import { createResizeObserver } from "../utils/observeHelper.js";
+import { warn } from "../utils/helpers.js";
 import { GSAPCONFIG } from "../utils/constant.js";
+import { requestSTRefresh } from "../utils/helpers.js";
 
 const ROOT_DOM = {
   list: '[data-drawer="list"]',
@@ -9,120 +9,41 @@ const ROOT_DOM = {
 };
 
 const ITEM_DOM = {
-  content: '[data-drawer="content"]',
   desc: '[data-drawer="desc"]',
   img: '[data-drawer="img"]',
 };
 
-const state = {
-  isInit: false,
-  activeItem: null,
-};
-
-const measureHeight = new Map();
-
-function initEventOnce() {
-  if (state.isInit) return;
-  state.isInit = true;
-
-  const list = document.querySelector(ROOT_DOM.list);
-  const overlay = document.querySelector(ROOT_DOM.overlay);
-
-  if (!list || !overlay) {
-    warn("[drawerMaterialsSection]", "Root DOM missing", { list, overlay });
-    return null;
-  }
-
-  list.addEventListener("click", function (e) {
-    const item = e.target.closest(ROOT_DOM.item);
-
-    if (!item) {
-      warn("[drawerMaterialsSection]", "Root DOM missing", { item });
-      return null;
-    }
-
-    if (state.activeItem === item) return;
-
-    if (state.activeItem) {
-      closeItem(state.activeItem);
-    }
-
-    createItemAnimation(item);
-    openItem(item, e.currentTarget);
-  });
-
-  overlay.addEventListener("click", () => {
-    if (!state.activeItem) return;
-
-    const item = state.activeItem;
-    state.activeItem = null;
-
-    closeItem(item);
-  });
-
-  ScrollTrigger.addEventListener("refresh", () => {
-    if (!state.activeItem) return;
-
-    const item = state.activeItem;
-    state.activeItem = null;
-
-    closeItem(item);
-  });
-}
+let activeItem = null;
 
 function getItemDOM(item) {
-  return {
-    content: item.querySelector(ITEM_DOM.content),
-    desc: item.querySelector(ITEM_DOM.desc),
-    img: item.querySelector(ITEM_DOM.img),
-  };
-}
+  const desc = item.querySelector(ITEM_DOM.desc);
+  const img = item.querySelector(ITEM_DOM.img);
 
-function openItem(item, list) {
-  const { content } = getItemDOM(item);
+  if (!desc || !img) {
+    warn("[drawerMaterialsSection]", "Item missing content", {
+      content,
+      desc,
+      img,
+    });
 
-  if (!content) {
-    warn("[drawerMaterialsSection]", "Item missing content", item);
     return null;
   }
 
-  let height = measureHeight.get(item);
-  if (!measureHeight.has(item)) {
-    height = getMeasureHeight(item, content);
-    setupROMeasureHeight(item, content);
-  }
+  return { desc, img };
+}
 
-  item.style.setProperty("--expand-height", `${height}px`);
-  list.style.setProperty("--expand-height", `${height}px`);
+function openItem(item) {
   item.classList.add("is-actived");
-  state.activeItem = item;
 
-  item.__tl.play();
+  if (activeItem === null) requestSTRefresh();
+
+  activeItem = item;
+  item.__tl?.play();
 }
 
 function closeItem(item) {
   item.classList.remove("is-actived");
-  item.__tl.reverse();
-}
-
-function getMeasureHeight(item, content) {
-  const height = content.scrollHeight;
-  measureHeight.set(item, height);
-
-  return height;
-}
-
-function setupROMeasureHeight(item, content) {
-  const update = createRafDebouncer(() => {
-    const newHeight = content.scrollHeight;
-    measureHeight.set(item, newHeight);
-
-    if (state.activeItem === item) {
-      item.style.setProperty("--expand-height", `${newHeight}px`);
-    }
-  });
-
-  createResizeObserver(content, update);
+  item.__tl?.reverse();
 }
 
 // Make animation functions
@@ -130,11 +51,7 @@ function createItemAnimation(item) {
   if (item.__tl) return;
 
   const { desc, img } = getItemDOM(item);
-
-  if (!desc || !img) {
-    warn("[drawerMaterialsSection]", "Missing DOM DESC", { desc, img });
-    return null;
-  }
+  if (!desc || !img) return null;
 
   const tl = gsap.timeline({ paused: true });
   const descSpilt = SplitText.create(desc, {
@@ -150,20 +67,76 @@ function createItemAnimation(item) {
       ease: GSAPCONFIG.SLIT_TEXT_EASE,
       stagger: 0.04,
     },
-    "0"
+    "0",
   ).to(
     img,
     {
       opacity: 1,
       duration: 0.4,
     },
-    "0"
+    "0",
   );
 
   item.__tl = tl;
+  item.__split = descSpilt;
+}
+
+export function resetDrawer() {
+  if (!activeItem) return;
+
+  const item = activeItem;
+  activeItem = null;
+  closeItem(item);
 }
 
 export function drawerMaterialsInit(config) {
   const { viewportName } = config;
-  initEventOnce();
+
+  const list = document.querySelector(ROOT_DOM.list);
+  const overlay = document.querySelector(ROOT_DOM.overlay);
+
+  if (!list || !overlay) {
+    warn("[drawerMaterialsSection]", "Root DOM missing", { list, overlay });
+    return null;
+  }
+
+  function onClickList(e) {
+    const item = e.target.closest(ROOT_DOM.item);
+    if (!item) return;
+
+    if (activeItem === item) return;
+
+    if (activeItem) {
+      closeItem(activeItem);
+    }
+
+    createItemAnimation(item);
+    openItem(item);
+  }
+
+  function onClickOverlay() {
+    if (!activeItem) return;
+
+    const item = activeItem;
+    activeItem = null;
+
+    closeItem(item);
+  }
+
+  list.addEventListener("click", onClickList);
+  overlay.addEventListener("click", onClickOverlay);
+
+  return function destroy() {
+    list.removeEventListener("click", onClickList);
+    overlay.removeEventListener("click", onClickOverlay);
+
+    items.forEach((item) => {
+      item.__tl?.kill();
+      item.__split?.revert();
+      delete item.__tl;
+      delete item.__split;
+    });
+
+    activeItem = null;
+  };
 }
