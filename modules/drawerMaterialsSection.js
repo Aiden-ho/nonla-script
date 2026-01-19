@@ -14,6 +14,7 @@ const ITEM_DOM = {
 };
 
 let activeItem = null;
+let hasExpandedOnce = false;
 
 function getItemDOM(item) {
   const desc = item.querySelector(ITEM_DOM.desc);
@@ -34,8 +35,13 @@ function getItemDOM(item) {
 
 function openItem(item) {
   item.classList.add("is-actived");
-
-  if (activeItem === null) requestSTRefresh();
+  if (!hasExpandedOnce) {
+    gsap.delayedCall(0.01, () => {
+      requestSTRefresh();
+      hasExpandedOnce = true;
+    });
+  }
+  // if (activeItem === null) requestSTRefresh();
 
   activeItem = item;
   item.__tl?.play();
@@ -52,33 +58,40 @@ function createItemAnimation(item) {
 
   const { desc, img } = getItemDOM(item);
   if (!desc || !img) return null;
+  function init() {
+    const tl = gsap.timeline({ paused: true });
+    const descSpilt = SplitText.create(desc, {
+      type: "lines",
+      mask: "lines",
+    });
 
-  const tl = gsap.timeline({ paused: true });
-  const descSpilt = SplitText.create(desc, {
-    type: "lines",
-    mask: "lines",
-  });
+    tl.from(
+      descSpilt.lines,
+      {
+        yPercent: 115,
+        duration: 1,
+        ease: GSAPCONFIG.SLIT_TEXT_EASE,
+        stagger: 0.04,
+      },
+      "0",
+    ).to(
+      img,
+      {
+        opacity: 1,
+        duration: 0.4,
+      },
+      "0",
+    );
 
-  tl.from(
-    descSpilt.lines,
-    {
-      yPercent: 115,
-      duration: 1,
-      ease: GSAPCONFIG.SLIT_TEXT_EASE,
-      stagger: 0.04,
-    },
-    "0",
-  ).to(
-    img,
-    {
-      opacity: 1,
-      duration: 0.4,
-    },
-    "0",
-  );
+    item.__tl = tl;
+    item.__split = descSpilt;
+  }
 
-  item.__tl = tl;
-  item.__split = descSpilt;
+  if (document.fonts.status === "loaded") {
+    init();
+  } else {
+    document.fonts.ready.then(init);
+  }
 }
 
 export function resetDrawer() {
@@ -115,28 +128,39 @@ export function drawerMaterialsInit(config) {
   }
 
   function onClickOverlay() {
-    if (!activeItem) return;
-
-    const item = activeItem;
-    activeItem = null;
-
-    closeItem(item);
+    resetDrawer();
   }
 
   list.addEventListener("click", onClickList);
   overlay.addEventListener("click", onClickOverlay);
 
   return function destroy() {
+    if (activeItem) {
+      const item = activeItem;
+      activeItem = null;
+
+      // NOTE: force timeline về start, KHÔNG animate
+      item.__tl?.pause(0);
+      item.classList.remove("is-actived");
+    }
+
     list.removeEventListener("click", onClickList);
     overlay.removeEventListener("click", onClickOverlay);
+    const items = list.querySelectorAll(ROOT_DOM.item);
 
     items.forEach((item) => {
       item.__tl?.kill();
       item.__split?.revert();
+
+      gsap.set(item.querySelectorAll(`${ITEM_DOM.desc}, ${ITEM_DOM.img}`), {
+        clearProps: "all",
+      });
+
       delete item.__tl;
       delete item.__split;
     });
 
     activeItem = null;
+    hasExpandedOnce = false;
   };
 }
