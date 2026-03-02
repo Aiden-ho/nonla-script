@@ -1,115 +1,177 @@
-import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
-import { getMotionOptByViewport, warn } from "../utils/helpers.js";
+import { MEDIARULE, GSAPCONFIG } from "../utils/constant.js";
+import { logError, selectElements } from "../utils/helpers.js";
+import { STORE } from "../utils/globalStore.js";
 
-const ROOT_DOM = {
-  tracker: '[data-horizon="tracker"]',
-  wrapper: '[data-horizon="wrapper"]',
-  progress: '[data-horizon="progress"]',
-};
-const DEFAULT_OPT = {
-  scrub: GSAPCONFIG.SCRUB,
+const MOTION_DEFAULTS = {
+  scrub: 0.8,
   ease: GSAPCONFIG.EASE,
   holdEnd: 0.06,
 };
-const OVERRIDE_OPT = {
-  [BREAKPOINT.MOBILE]: null,
+
+const FRAMEITEM = {
+  FIRST: "1",
+  SECOND: "2",
 };
 
-function getDom() {
-  const wrapper = document.querySelector(ROOT_DOM.wrapper);
+const getHorizontalPoint = (el, percentage, edge = "right") => {
+  return () => {
+    const imgSpec = el.getBoundingClientRect();
+    let point;
+    if (edge === "left") {
+      const left =
+        imgSpec.left > STORE.VW ? imgSpec.left - STORE.VW : imgSpec.left;
+      point = left * percentage;
+    } else {
+      const right =
+        imgSpec.right > STORE.VW ? imgSpec.right - STORE.VW : imgSpec.right;
+      point = right * percentage;
+    }
+
+    return `${edge} ${point}px`;
+  };
+};
+
+export function horizonScrollAboutInit({ mm }) {
+  const moduleName = "[horizonScrollAbout]";
+  const wrapper = document.querySelector('[data-horizon="wrapper"]');
 
   if (!wrapper) {
-    warn("[horizonScrollAbout]", "Missing ROOT DOM", { wrapper });
-    return null;
+    logError(moduleName, wrapper, '[data-slit="wrapper"]');
+    return;
   }
 
-  const tracker = wrapper.querySelector('[data-horizon="tracker"]');
-  const progress = wrapper.querySelector('[data-horizon="progress"]');
-  const progress_value = progress?.querySelector("div");
-
-  if (!tracker || !progress || !progress_value) {
-    warn("[horizonScrollAbout]", "Missing ROOT DOM", {
-      tracker,
-      progress,
-      progress_value,
-    });
-    return null;
-  }
-
-  return {
-    wrapper,
-    tracker,
-    progress,
-    progress_value,
+  const selectors = {
+    tracker: '[data-horizon="tracker"]',
+    progress: '[data-horizon="progress"]',
+    progressValue: '[data-horizon="progress-value"]',
+    frameItem: '[data-horizon="frame-item"]',
   };
-}
 
-// Make animation functions
-function createSlideScrollAnimation(dom, motionConfig = {}) {
-  const { wrapper, tracker, progress_value } = dom;
-  const { scrub, ease, holdEnd } = motionConfig;
-
-  // gsap.set(tracker, { force3D: true, willChange: "transform", z: 0.01 });
+  const dom = selectElements(wrapper, selectors, moduleName);
+  if (!dom) return;
+  const { tracker, progress, progressValue } = dom;
 
   const getAmount = () => {
     const diff = tracker.scrollWidth - wrapper.clientWidth;
     return diff > 0 ? -diff : 0;
   };
 
-  const mainDuration = 1;
-  const scrollRatio = mainDuration + holdEnd;
+  const frameItems = wrapper.querySelectorAll(selectors.frameItem);
 
-  const tl = gsap.timeline({
-    defaults: {
-      ease, // make all tweens use a ease of none, feels nicer with working with scrub
-    },
-    scrollTrigger: {
-      trigger: wrapper,
-      start: "top top",
-      end: () => `+=${Math.abs(getAmount()) * scrollRatio}`,
-      pin: true,
-      pinSpacing: true,
-      scrub,
-      anticipatePin: 1,
-      invalidateOnRefresh: true,
-    },
+  if (!frameItems.length) {
+    logError(moduleName, wrapper, selectors.frameItem);
+    return;
+  }
+
+  gsap.set(frameItems, {
+    willChange: "transform, clip-path",
+    force3D: true,
   });
 
-  tl.to(tracker, {
-    x: () => getAmount(),
-    duration: mainDuration,
-    lazy: true,
-  }).to(
-    progress_value,
-    {
-      right: "0%",
-      transformOrigin: "center left",
-      duration: mainDuration,
-    },
-    "<"
-  );
-  tl.to({}, { duration: holdEnd });
-  return tl;
-}
+  mm.add({ isDesktop: MEDIARULE.desktop.query }, (context) => {
+    const motionConfig = MOTION_DEFAULTS;
+    const mainDuration = 1;
+    const scrollRatio = mainDuration + motionConfig.holdEnd;
 
-export function horizonScrollAboutInit(config = {}) {
-  const { viewportName } = config;
-  const dom = getDom();
-  if (dom === null) return;
+    const mainTl = gsap.timeline({
+      defaults: {
+        ease: motionConfig.ease, // make all tweens use a ease of none, feels nicer with working with scrub
+      },
+      scrollTrigger: {
+        trigger: wrapper,
+        start: "top top",
+        end: () => `+=${Math.abs(getAmount()) * scrollRatio}`,
+        pin: true,
+        pinSpacing: true,
+        scrub: motionConfig.scrub,
+        invalidateOnRefresh: true,
+      },
+    });
 
-  const motionConfig = getMotionOptByViewport(
-    viewportName,
-    DEFAULT_OPT,
-    OVERRIDE_OPT
-  );
+    mainTl
+      .to(tracker, {
+        x: () => getAmount(),
+        duration: mainDuration,
+        lazy: true,
+      })
+      .to(
+        progressValue,
+        {
+          right: "0%",
+          transformOrigin: "center left",
+          duration: mainDuration,
+        },
+        "<",
+      );
+    mainTl.to({}, { duration: motionConfig.holdEnd });
 
-  if (!motionConfig) return;
-  const tl = createSlideScrollAnimation(dom, motionConfig);
+    Array.from(frameItems).forEach((frame) => {
+      const frameName = frame.getAttribute("frame-name");
+      const imgLarge = frame.querySelector('[frame-img="large"]');
+      const imgMedium = frame.querySelector('[frame-img="medium"]');
+      const imgSmall = frame.querySelector('[frame-img="small"]');
 
-  return () => {
-    tl.scrollTrigger?.kill();
-    tl.kill();
+      gsap.set(imgLarge, { clipPath: "inset(20%)" });
+      gsap.to(imgLarge, {
+        clipPath: "inset(0%)",
+        scrollTrigger: {
+          trigger: imgLarge,
+          containerAnimation: mainTl, // Kết nối với Main Timeline của bạn
+          start: "left 33%",
+          end: "left 10%",
+          scrub: 1,
+          invalidateOnRefresh: true,
+        },
+      });
 
-    gsap.set([dom.tracker, dom.progress_value], { clearProps: "all" });
-  };
+      if (frameName === FRAMEITEM.FIRST) {
+        gsap.from(imgSmall, {
+          xPercent: 60,
+          scrollTrigger: {
+            trigger: imgSmall,
+            containerAnimation: mainTl, // Kết nối với Main Timeline của bạn
+            start: getHorizontalPoint(imgSmall, 0.9, "right"),
+            end: getHorizontalPoint(imgSmall, 0.4, "right"),
+            scrub: 1,
+            invalidateOnRefresh: true,
+          },
+        });
+        gsap.to(imgMedium, {
+          xPercent: -10,
+          scrollTrigger: {
+            trigger: imgMedium,
+            containerAnimation: mainTl,
+            start: getHorizontalPoint(imgMedium, 0.9, "left"),
+            end: getHorizontalPoint(imgMedium, 0.2, "left"),
+            scrub: 2,
+            invalidateOnRefresh: true,
+          },
+        });
+      } else if (frameName === FRAMEITEM.SECOND) {
+        gsap.to(imgSmall, {
+          xPercent: -100,
+          scrollTrigger: {
+            trigger: imgSmall,
+            containerAnimation: mainTl, // Kết nối với Main Timeline của bạn
+            start: getHorizontalPoint(imgSmall, 0.9, "left"),
+            end: getHorizontalPoint(imgSmall, 0.7, "left"),
+            scrub: 1,
+            invalidateOnRefresh: true,
+          },
+        });
+
+        gsap.to(imgMedium, {
+          xPercent: 50,
+          scrollTrigger: {
+            trigger: imgMedium,
+            containerAnimation: mainTl,
+            start: getHorizontalPoint(imgMedium, 0.9, "left"),
+            end: getHorizontalPoint(imgMedium, 0.6, "left"),
+            scrub: 2,
+            invalidateOnRefresh: true,
+          },
+        });
+      }
+    });
+  });
 }
