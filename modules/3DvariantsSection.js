@@ -1,127 +1,162 @@
-import { warn } from "../utils/helpers.js";
+import { warn, selectElements } from "../utils/helpers.js";
 import { STORE } from "../utils/globalStore.js";
-import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
+import { MEDIARULE } from "../utils/constant.js";
 
-const ROOT_DOM = {
-  section: "[data-zoom='section']",
-  wrapper: "[data-zoom='wrapper']",
-  imgs: "[data-zoom='img']",
+const MOTION_DEFAULTS = {
+  scrub: 1.5,
 };
 
-function createDesktopAnimation() {
-  const wrapper = document.querySelector(ROOT_DOM.wrapper);
-  const imgs = gsap.utils.toArray(ROOT_DOM.imgs);
+const MOTION_MOBILE = {
+  scrub: 1,
+};
 
-  if (!wrapper || !imgs) {
-    warn("[3dVariantSection]", "Missing ROOT DOM", { wrapper, imgs });
-    return null;
+export function VariantSectionInit({ mm }) {
+  const moduleName = "[3dVariantSection]";
+
+  const selectors = {
+    section: "[data-zoom='section']",
+    wrapper: "[data-zoom='wrapper']",
+    imgs: "[data-zoom='img']",
+  };
+
+  const { imgs: imgSelector, ...rootSelectors } = selectors;
+  const dom = selectElements(document, rootSelectors, moduleName);
+  if (!dom) return;
+  const { section, wrapper } = dom;
+  const imgs = gsap.utils.toArray(imgSelector, section);
+
+  if (imgs.length === 0) {
+    warn(moduleName, "No images found for", imgSelector);
+    return;
   }
 
-  gsap.set(imgs, {
-    autoAlpha: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-    scale: 0.01,
-  });
+  mm.add(
+    { isDesktop: MEDIARULE.desktop.query, isMobile: MEDIARULE.mobile.query },
+    (context) => {
+      const isMobile = context.conditions.isMobile;
+      const motionConfig = isMobile ? MOTION_MOBILE : MOTION_DEFAULTS;
 
-  const tl = gsap.timeline({
-    defaults: { ease: GSAPCONFIG.EASE },
-    scrollTrigger: {
-      trigger: wrapper,
-      start: "top top",
-      end: "+=" + imgs.length * 100,
-      scrub: GSAPCONFIG.SCRUB,
-      pin: true,
-      invalidateOnRefresh: true,
+      if (isMobile) {
+        gsap.set(section, { height: "300vh" });
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: "top top",
+            end: "bottom bottom",
+            scrub: motionConfig.scrub,
+            invalidateOnRefresh: true,
+          },
+        });
+
+        imgs.forEach((img, i) => {
+          tl.fromTo(
+            img,
+            { yPercent: 150, autoAlpha: 0 },
+            {
+              yPercent: 0,
+              rotation: i * (i % 2 === 0 ? 1 : -1),
+              autoAlpha: 1,
+              scale: 1,
+              duration: 3,
+            },
+          );
+        });
+      } else {
+        gsap.set(imgs, {
+          willChange: "transform, opacity",
+          autoAlpha: 0,
+          force3D: true,
+        });
+
+        gsap.set(wrapper, {
+          perspective: 1000,
+          transformStyle: "preserve-3d",
+        });
+
+        gsap.set(imgs, {
+          scale: 0,
+          x: 0,
+          y: 0,
+          z: 0,
+          rotationX: 0,
+          rotationY: 0,
+          rotationZ: 0,
+        });
+
+        const preComputedData = imgs.map((_, i) => ({
+          x: generateX(i, STORE.VW),
+          y: generateY(i, STORE.VH),
+          rotX: i % 2 === 0 ? -15 : 15,
+          rotY: i % 2 === 0 ? 10 : -10,
+        }));
+
+        const tl = gsap.timeline({
+          defaults: { ease: "power3.out" },
+          scrollTrigger: {
+            trigger: wrapper,
+            start: "top top",
+            end: () => `+=${imgs.length * 400}px`,
+            scrub: motionConfig.scrub,
+            pin: true,
+            invalidateOnRefresh: true,
+          },
+        });
+
+        imgs.forEach((img, index) => {
+          const atTime = index * 0.5;
+          const data = preComputedData[index];
+
+          tl.to(img, { autoAlpha: 1, immediateRender: false }, atTime);
+          tl.to(
+            img,
+            {
+              x: data.x,
+              y: data.y,
+              z: 1000, // Random Z depth cho tự nhiên
+              rotationX: data.rotX,
+              rotationY: data.rotY,
+              scale: 1,
+              force3D: true,
+              ease: "cubic-bezier(0.33, 1, 0.68, 1)",
+              duration: 2,
+            },
+            atTime,
+          );
+
+          if (index > 0) {
+            tl.to(
+              imgs[index - 1],
+              {
+                autoAlpha: 0,
+                display: "none", // Xóa khỏi GPU hoàn toàn
+                duration: 0.5,
+                overwrite: "auto",
+              },
+              atTime + 0.5,
+            );
+          }
+        });
+      }
+
+      return () => {
+        gsap.set([section, wrapper, ...imgs], { clearProps: "all" });
+      };
     },
-  });
-
-  imgs.forEach((img, index) => {
-    const at = index * 0.4;
-    tl.to(img, { autoAlpha: 1, duration: 0.01 }, at);
-    tl.to(
-      img,
-      {
-        x: () => generateX(index, STORE.VW),
-        y: () => generateY(index, STORE.VH),
-        z: 2000,
-        rotationX: () => (index % 2 === 0 ? -2 : 2),
-        rotationY: () => (index % 2 === 0 ? 8 : -8),
-        scale: 1,
-        ease: "cubic-bezier(0.33, 1, 0.68, 1)",
-        duration: 1.2,
-      },
-      at
-    );
-  });
-}
-
-function createMobileAnimation() {
-  const section = document.querySelector(ROOT_DOM.section);
-  const imgs = document.querySelectorAll(ROOT_DOM.imgs);
-
-  if (!section || !imgs) {
-    warn("[3dVariantSection]", "Missing ROOT DOM", { wrapper, imgs });
-    return null;
-  }
-
-  const imgWidths = Array.from(imgs).map(
-    (el) => el.offsetWidth || el.getBoundingClientRect().width || 0
   );
-
-  const totalHeigth = () =>
-    imgWidths.reduce(
-      (total_height, item_height) => total_height + item_height + 32,
-      0
-    );
-
-  const tl = gsap.timeline({
-    defaults: { ease: GSAPCONFIG.EASE },
-    scrollTrigger: {
-      trigger: section,
-      start: "top top",
-      end: () => `+=${totalHeigth()}px`,
-      scrub: GSAPCONFIG.SCRUB,
-      pin: true,
-      invalidateOnRefresh: true,
-    },
-  });
-
-  tl.to(imgs, {
-    y: () => -totalHeigth(),
-  });
 }
 
 function generateY(index, vh) {
-  const yOptions = [-0.25, -0.1, 0, 0.1, 0.25]; // các “slot” Y
+  const yOptions = [-0.25, -0.1, 0, 0.1, 0.25];
   const layerOffset = Math.floor(index / yOptions.length) * 0.02;
-  const y = vh * (yOptions[index % yOptions.length] + layerOffset);
-
-  return y;
+  return vh * (yOptions[index % yOptions.length] + layerOffset);
 }
 
 function generateX(index, vw) {
   const sideSign = index % 2 === 0 ? -1 : 1;
   const minX = vw * 0.15;
   const maxX = vw * 0.4;
-  const random = Math.abs(Math.sign(index + 1) % 1);
-  const x = (random * (maxX - minX) + minX) * sideSign;
-
+  const pseudoRandom = Math.abs(Math.sin(index * 999) % 1);
+  const x = (pseudoRandom * (maxX - minX) + minX) * sideSign;
   return x;
-}
-
-const VIEWPORT_MOTION = {
-  [BREAKPOINT.MOBILE]: createMobileAnimation,
-  [BREAKPOINT.TABLET]: createDesktopAnimation,
-  [BREAKPOINT.SMALL_DESKTOP]: createDesktopAnimation,
-  [BREAKPOINT.LARGE_DESKTOP]: createDesktopAnimation,
-};
-
-export function VariantSectionInit(config) {
-  const { viewportName } = config;
-
-  const animation = VIEWPORT_MOTION[viewportName];
-  if (!animation) return null;
-  animation();
 }

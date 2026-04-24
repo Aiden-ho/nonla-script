@@ -3,12 +3,17 @@ let lenis;
 export function GsapSetup() {
   gsap.registerPlugin(ScrollTrigger, SplitText, Flip);
 
+  ScrollTrigger.config({
+    autoRefreshEvents: "DOMContentLoaded,load",
+    ignoreMobileResize: true,
+  });
+
   if (lenis) return lenis;
 
   // Initialize a new Lenis instance for smooth scrolling
   lenis = new Lenis({
-    lerp: 0.08,
-    touchMultiplier: 1.5,
+    lerp: 0.165,
+    wheelMultiplier: 0.95,
   });
 
   // Synchronize Lenis scrolling with GSAP's ScrollTrigger plugin
@@ -22,6 +27,19 @@ export function GsapSetup() {
 
   // Disable lag smoothing in GSAP to prevent any delay in scroll animations
   gsap.ticker.lagSmoothing(0);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      lenis.stop();
+      gsap.ticker.sleep();
+    } else {
+      setTimeout(() => {
+        gsap.ticker.wake();
+        lenis.start();
+        ScrollTrigger.refresh();
+      }, 250);
+    }
+  });
 
   // resize when scrollTrigger resize.
   ScrollTrigger.addEventListener("refresh", () => {

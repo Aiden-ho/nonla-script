@@ -1,12 +1,5 @@
-import {
-  warn,
-  getMotionOptByViewport,
-  createRafDebouncer,
-  getViewportRule,
-} from "../utils/helpers.js";
-import { createResizeObserver } from "../utils/observeHelper.js";
-import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
-import { STORE } from "../utils/globalStore.js";
+import { warn } from "../utils/helpers.js";
+import { GSAPCONFIG, MEDIARULE } from "../utils/constant.js";
 
 const ROOT_DOM = {
   section: "[data-location='section']",
@@ -24,13 +17,7 @@ const CONTENT_DOM = {
 
 const state = {
   activeTarget: null,
-  isReaveled: false,
-};
-
-const DEFAULT_OPT = { pin: true };
-const OVERRIDE_OPT = {
-  [BREAKPOINT.TABLET]: { pin: false },
-  [BREAKPOINT.MOBILE]: { pin: false },
+  isRevealed: false,
 };
 
 function getDOM() {
@@ -73,94 +60,18 @@ function getDOM() {
   return { section, map, action, heading, text, infoList, mapWrapper };
 }
 
-function createRevealMapAnimation(dom = {}, motionConfig = {}) {
-  const { section, map, action, heading, text } = dom;
-  const { pin } = motionConfig;
-  gsap.set([map, action], { autoAlpha: 0 });
-
-  let headinngSpit, textSpit, tl;
-
-  function init() {
-    headinngSpit = SplitText.create(heading, {
-      type: "lines",
-      mask: "lines",
-    });
-
-    textSpit = SplitText.create(text, {
-      type: "lines",
-      mask: "lines",
-    });
-
-    tl = gsap.timeline({
-      defaults: { ease: GSAPCONFIG.EASE },
-      scrollTrigger: {
-        trigger: section,
-        start: "top top",
-        end: "bottom 10%",
-        pin,
-        pinSpacing: pin,
-        invalidateOnRefresh: true,
-        toggleActions: "play reverse play reverse",
-      },
-      onComplete: () => (state.isReaveled = true),
-    });
-
-    tl.from(
-      headinngSpit.lines,
-      {
-        yPercent: 115,
-        ease: GSAPCONFIG.SLIT_TEXT_EASE,
-        stagger: 0.04,
-      },
-      0,
-    )
-      .from(
-        textSpit.lines,
-        {
-          yPercent: 115,
-          ease: GSAPCONFIG.SLIT_TEXT_EASE,
-          stagger: 0.04,
-        },
-        ">",
-      )
-      .to(map, { autoAlpha: 1, duration: 0.5 }, "<+=0.2")
-      .to(action, { autoAlpha: 1, duration: 0.5 }, "<");
-  }
-
-  if (document.fonts.status === "loaded") {
-    init();
-  } else {
-    document.fonts.ready.then(init);
-  }
-
-  return {
-    // tl,
-    // headinngSpit,
-    // textSpit,
-    get tl() {
-      return tl;
-    },
-    get headinngSpit() {
-      return headinngSpit;
-    },
-    get textSpit() {
-      return textSpit;
-    },
-  };
-}
-
-function setActive(dom, target) {
+function setActive(dom, target, isMobile) {
   if (state.activeTarget === target) return;
 
   if (state.activeTarget) {
-    toggleState(dom, state.activeTarget, false);
+    toggleState(dom, state.activeTarget, false, isMobile);
   }
 
   state.activeTarget = target;
-  toggleState(dom, target, true);
+  toggleState(dom, target, true, isMobile);
 }
 
-function toggleState(dom = {}, target, isActive) {
+function toggleState(dom = {}, target, isActive, isMobile) {
   const { map, action, infoList, section } = dom;
 
   const pin = map.querySelector(`[data-target="${target}"]`);
@@ -168,7 +79,6 @@ function toggleState(dom = {}, target, isActive) {
   const infos = infoList.filter((el) => el.dataset.key === target);
 
   if (!pin || !tab || !infos.length) {
-    debugger;
     warn("[revealMapSection]", "Missing TOGGLE DOM", {
       pin,
       tab,
@@ -179,14 +89,12 @@ function toggleState(dom = {}, target, isActive) {
 
   pin.classList.toggle("is-actived", isActive);
   tab.classList.toggle("is-actived", isActive);
-  // info.classList.toggle("is-actived", isActive);
 
   infos.forEach((el) => {
     el.classList.toggle("is-actived", isActive);
   });
 
-  const currentViewport = getViewportRule().name;
-  if (currentViewport === BREAKPOINT.MOBILE && isActive) {
+  if (isMobile && isActive) {
     focusPinToWrapper(pin, map, section);
   }
 }
@@ -219,76 +127,112 @@ function focusPinToWrapper(pin, map, section) {
   });
 }
 
-export function revealMapInit(config) {
-  const { viewportName } = config;
-
+export function revealMapInit({ mm }) {
   const dom = getDOM();
-  if (dom == null) return null;
-  const { map, action, mapWrapper, section } = dom;
+  if (!dom) return;
 
-  const motionConfig = getMotionOptByViewport(
-    viewportName,
-    DEFAULT_OPT,
-    OVERRIDE_OPT,
-  );
+  function initMatchMedia() {
+    mm.add(
+      {
+        isDesktop: MEDIARULE.desktop.query,
+        isMobile: MEDIARULE.mobile.query,
+      },
+      (context) => {
+        const { isDesktop, isMobile } = context.conditions;
+        const { section, map, action, mapWrapper, heading, text } = dom;
 
-  if (viewportName === BREAKPOINT.MOBILE) {
-    setActive(dom, "HN");
+        // 1. Khởi tạo trạng thái ban đầu
+        gsap.set([map, action], { autoAlpha: 0 });
+
+        // SplitText
+        const headingSplit = SplitText.create(heading, {
+          type: "lines",
+          mask: "lines",
+        });
+        const textSplit = SplitText.create(text, {
+          type: "lines",
+          mask: "lines",
+        });
+
+        // 2. Setup Timeline
+        const tl = gsap.timeline({
+          defaults: { ease: GSAPCONFIG.EASE },
+          scrollTrigger: {
+            trigger: section,
+            start: "top 20%",
+            end: "bottom bottom",
+            scrub: isMobile ? false : true,
+            invalidateOnRefresh: true,
+          },
+          onComplete: () => {
+            state.isRevealed = true;
+          },
+        });
+
+        tl.from(
+          headingSplit.lines,
+          { yPercent: 115, ease: GSAPCONFIG.SLIT_TEXT_EASE, stagger: 0.04 },
+          0,
+        )
+          .from(
+            textSplit.lines,
+            { yPercent: 115, ease: GSAPCONFIG.SLIT_TEXT_EASE, stagger: 0.04 },
+            ">",
+          )
+          .to(map, { autoAlpha: 1, duration: 0.5 }, "<+=0.2")
+          .to(action, { autoAlpha: 1, duration: 0.5 }, "<");
+
+        // 3. Xử lý Logic Viewport ban đầu
+        if (isMobile) {
+          setActive(dom, "HN", isMobile);
+        } else {
+          // Khi từ Mobile về Desktop, clear transform của wrapper do hàm focusPinToWrapper gây ra
+          gsap.set(mapWrapper, { clearProps: "transform" });
+        }
+
+        // 4. Khai báo Event Listeners trong Context
+        const clickAction = (e) => {
+          if (!state.isRevealed) return;
+          const tab = e.target.closest("[data-target]");
+          if (tab) setActive(dom, tab.dataset.target, isMobile);
+        };
+
+        const clickMap = (e) => {
+          if (!state.isRevealed) return;
+          const pin = e.target.closest(".pin");
+          if (pin) setActive(dom, pin.dataset.target, isMobile);
+        };
+
+        action.addEventListener("click", clickAction);
+        map.addEventListener("click", clickMap);
+
+        // 5. Cleanup Function (Tự động chạy khi Breakpoint thay đổi hoặc component destroy)
+        return () => {
+          state.isRevealed = false;
+          action.removeEventListener("click", clickAction);
+          map.removeEventListener("click", clickMap);
+
+          // Revert Text
+          headingSplit.revert();
+          textSplit.revert();
+
+          // Reset active states
+          if (state.activeTarget) {
+            toggleState(dom, state.activeTarget, false, isMobile);
+            state.activeTarget = null;
+          }
+
+          // Clear toàn bộ inline CSS để không rác DOM khi chuyển viewport
+          gsap.set([map, action, mapWrapper], { clearProps: "all" });
+        };
+      },
+    );
   }
 
-  const { headinngSpit, textSpit, tl } = createRevealMapAnimation(
-    dom,
-    motionConfig,
-  );
-
-  function clickAction(e) {
-    if (!state.isReaveled) return;
-    const tab = e.target.closest("[data-target]");
-    if (!tab) return;
-    setActive(dom, tab.dataset.target);
+  // Đảm bảo load font xong mới chạy tính toán vị trí/split text
+  if (document.fonts.status === "loaded") {
+    initMatchMedia();
+  } else {
+    document.fonts.ready.then(initMatchMedia);
   }
-
-  function clickMap(e) {
-    if (!state.isReaveled) return;
-    const pin = e.target.closest(".pin");
-    if (!pin) return;
-    setActive(dom, pin.dataset.target);
-  }
-
-  action.addEventListener("click", clickAction);
-  map.addEventListener("click", clickMap);
-
-  createResizeObserver(
-    section,
-    createRafDebouncer(() => {
-      const w = window.innerWidth;
-      if (w === STORE.VW) return;
-
-      const currentViewport = getViewportRule().name;
-      if (currentViewport === BREAKPOINT.MOBILE) {
-        setActive(dom, "HN");
-      } else {
-        gsap.killTweensOf(mapWrapper);
-        gsap.set(mapWrapper, { clearProps: "transform" });
-      }
-    }),
-  );
-
-  return function destroy() {
-    if (state.activeTarget) {
-      toggleState(dom, state.activeTarget, false);
-      state.activeTarget = null;
-    }
-    state.isReaveled = false;
-
-    tl?.kill();
-    headinngSpit?.revert();
-    textSpit?.revert();
-
-    gsap.killTweensOf(mapWrapper);
-    gsap.set(mapWrapper, { clearProps: "transform" });
-
-    action.removeEventListener("click", clickAction);
-    map.removeEventListener("click", clickMap);
-  };
 }

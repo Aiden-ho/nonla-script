@@ -83,8 +83,9 @@ function createFooterAnimation(dom = {}) {
     tl = gsap.timeline({
       scrollTrigger: {
         trigger: section,
-        start: "top top",
+        start: "top 80%",
         end: "bottom bottom",
+        scrub: true,
         invalidateOnRefresh: true,
       },
     });
@@ -120,7 +121,7 @@ function createFooterAnimation(dom = {}) {
       footerHeading,
       {
         clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100% )",
-        duration: 0.08,
+        duration: 1,
         ease: "power3.out",
       },
       "<0.4",

@@ -1,114 +1,69 @@
-import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
-import { getMotionOptByViewport, warn } from "../utils/helpers.js";
+import { GSAPCONFIG, MEDIARULE } from "../utils/constant.js";
+import { logError, selectElements } from "../utils/helpers.js";
 
-const ROOT_DOM = {
-  intro: '[data-slit="intro"]',
-  hero: '[data-slit="hero"]',
-  introHeading: '[data-slit="heading"]',
-  wrapper: '[data-slit="wrapper"]',
-  polygon: "#slitPolygon",
-};
-
-// Make animation functions
-const DEFAULT_OPT = {
+const MOTION_DEFAULTS = {
   ease: GSAPCONFIG.EASE,
   start: "top top",
+  end: "+=150%",
+  scrub: 0.8,
+};
+
+const MOTION_MOBILE = {
   end: "+=100%",
-  duration: 0.67,
-  hold: 0.33,
-  scrub: GSAPCONFIG.SCRUB,
 };
 
-const OVERRIDE_OPT = {
-  [BREAKPOINT.MOBILE]: {
-    ...DEFAULT_OPT,
-    end: "+=60%",
-    duration: 0.85,
-    hold: 0.15,
-  },
-};
-
-function getDom() {
-  const wrapper = document.querySelector(ROOT_DOM.wrapper);
+export function slittingHeroSectionInit({ mm }) {
+  const moduleName = "[SlittingHero]";
+  const wrapper = document.querySelector('[data-slit="wrapper"]');
 
   if (!wrapper) {
-    warn("[SlittingHeroSection]", " Missing ROOT DOM", { wrapper });
-    return null;
+    logError(moduleName, wrapper, '[data-slit="wrapper"]');
+    return;
   }
 
-  const intro = wrapper.querySelector(ROOT_DOM.intro);
-  const hero = wrapper.querySelector(ROOT_DOM.hero);
-  const headingIntro = wrapper.querySelector(ROOT_DOM.introHeading);
-  const polygon = document.querySelector(ROOT_DOM.polygon);
+  const selectors = {
+    intro: '[data-slit="intro"]',
+    hero: '[data-slit="hero"]',
+    introHeading: '[data-slit="heading"]',
+    polygon: "#slitPolygon",
+  };
 
-  if (!intro || !hero || !headingIntro) {
-    warn("[SlittingHeroSection]", " Missing ROOT DOM", {
-      introSection,
-      heroSection,
-      headingIntro,
-      polygon,
-    });
-    return null;
-  }
-
-  return { intro, hero, headingIntro, wrapper, polygon };
-}
-
-function createSlittingHeroAnimation(dom, motionConfig = {}) {
-  const { intro, hero, headingIntro, wrapper, polygon } = dom;
-  const { scrub, ease, start, end, duration, hold } = motionConfig;
+  const dom = selectElements(wrapper, selectors, moduleName);
+  if (!dom) return;
+  const { intro, hero, introHeading, polygon } = dom;
 
   gsap.set(intro, {
-    willChange: "transform, clip-path", // Báo trước cho trình duyệt
+    willChange: "transform, clip-path",
     force3D: true,
-    z: 0.01, // Mẹo nhỏ để kích hoạt Hardware Acceleration
-    backfaceVisibility: "hidden",
   });
 
-  const tl = gsap.timeline({
-    defaults: { ease },
-    scrollTrigger: {
-      trigger: wrapper,
-      start,
-      end,
-      scrub,
-      invalidateOnRefresh: true,
+  mm.add(
+    {
+      isDesktop: MEDIARULE.desktop.query,
+      isMobile: MEDIARULE.mobile.query,
     },
-  });
+    (context) => {
+      const isMobile = context.conditions.isMobile;
+      const motionConfig = isMobile
+        ? { ...MOTION_DEFAULTS, ...MOTION_MOBILE }
+        : MOTION_DEFAULTS;
 
-  tl.to(polygon, {
-    attr: { points: "0 0, 0 1, 1 1, 1 0" },
-    duration,
-  });
-  tl.to(hero, { opacity: 0, duration }, 0);
-  tl.to(headingIntro, { opacity: 1, duration }, 0);
-  tl.to({}, { duration: hold });
-  // tl.progress(1).pause(0);
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: wrapper,
+          start: motionConfig.start,
+          end: motionConfig.end,
+          scrub: motionConfig.scrub,
+          invalidateOnRefresh: true,
+        },
+      });
 
-  return tl;
-}
-
-// main function
-export function slittingHeroSectionInit(config = {}) {
-  const { viewportName } = config;
-
-  const dom = getDom();
-  if (dom === null) return;
-
-  const motionConfig = getMotionOptByViewport(
-    viewportName,
-    DEFAULT_OPT,
-    OVERRIDE_OPT
+      tl.to(polygon, {
+        attr: { points: "0 0, 0 1, 1 1, 1 0" },
+        ease: "power2.out",
+      });
+      tl.to(hero, { autoAlpha: 0 }, 0);
+      tl.to(introHeading, { autoAlpha: 1 }, 0);
+    },
   );
-
-  const tl = createSlittingHeroAnimation(dom, motionConfig);
-
-  return () => {
-    tl.scrollTrigger?.kill();
-    tl.kill();
-
-    gsap.set([dom.intro, dom.hero, dom.headingIntro, dom.polygon], {
-      clearProps: "all",
-    });
-  };
 }

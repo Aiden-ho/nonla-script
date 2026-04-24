@@ -1,9 +1,13 @@
-export const STORE = {
-  VW: 0,
-  VH: 0,
+const state = {
+  VW: window.innerWidth,
+  VH: window.innerHeight,
+  wheelScrollDist: 0,
 };
 
+export const STORE = state;
+
 export function updateViewport() {
-  STORE.VW = window.innerWidth;
-  STORE.VH = window.innerHeight;
+  state.VW = window.innerWidth;
+  state.VH = window.innerHeight;
+  return state;
 }

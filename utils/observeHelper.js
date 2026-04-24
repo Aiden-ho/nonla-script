@@ -1,3 +1,5 @@
+/** OLD đã hết dùng trong các file chính */
+
 export function triggerPlayVideo() {
   const gifVideos = Array.from(document.querySelectorAll(".is-gif-video"));
 

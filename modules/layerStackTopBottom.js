@@ -1,57 +1,73 @@
-import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
-import { getMotionOptByViewport, warn } from "../utils/helpers.js";
+import { MEDIARULE, GSAPCONFIG } from "../utils/constant.js";
+import { selectElements } from "../utils/helpers.js";
 
-const DEFAULT_OPT = {
-  ease: GSAPCONFIG.EASE,
-  start: "top 80%",
+const MOTION_DEFAULTS = {
+  ease: "power2.out",
+  start: "top 90%",
   end: "top top",
-  scrub: GSAPCONFIG.SCRUB,
+  scrub: 0.8,
   filter: "brightness(50%) blur(10px)",
-  scale: 0.98,
+  scale: 0.95,
 };
-const OVERRIDE_OPT = {
-  [BREAKPOINT.MOBILE]: {
-    ...DEFAULT_OPT,
-    filter: "brightness(70%) blur(4px)",
-  },
+const MOTION_MOBILE = {
+  filter: "brightness(70%) blur(4px)",
+  scrub: 0.6,
 };
 
-// Make animation functions
-function createLayerStackAnimation(motionConfig = {}) {
-  const topLayer = document.querySelector('[data-layer="top"]');
-  const bottomLayer = document.querySelector('[data-layer="bottom"]');
+export function layerStackTopBottomInit({ mm }) {
+  const moduleName = "[LayerStackTopBottom]";
+  const selectors = {
+    topLayer: '[data-layer="top"]',
+    bottomLayer: '[data-layer="bottom"]',
+  };
 
-  if (!topLayer || !bottomLayer) {
-    warn("[LayerStackTopBottom]", "Missing DOM", { topLayer, bottomLayer });
-    console.warn();
-    return null;
-  }
+  const dom = selectElements(null, selectors, moduleName);
+  if (!dom) return;
+  const { topLayer, bottomLayer } = dom;
 
-  const { ease, start, end, scrub, filter, scale } = motionConfig;
-
-  gsap.to(topLayer, {
-    ease,
-    scale,
-    startAt: { filter: "brightness(100%) blur(0px)" },
-    filter,
-    scrollTrigger: {
-      trigger: bottomLayer,
-      start,
-      end,
-      scrub,
-      invalidateOnRefresh: true,
-    },
+  gsap.set(topLayer, {
+    willChange: "filter, transform",
+    force3D: true,
   });
-}
 
-export function layerStackTopBottomInit(config = {}) {
-  const { viewportName } = config;
+  mm.add(
+    {
+      isDesktop: MEDIARULE.desktop.query,
+      isMobile: MEDIARULE.mobile.query,
+    },
+    (context) => {
+      const isMobile = context.conditions.isMobile;
+      const motionConfig = isMobile
+        ? { ...MOTION_DEFAULTS, ...MOTION_MOBILE }
+        : MOTION_DEFAULTS;
 
-  const motionConfig = getMotionOptByViewport(
-    viewportName,
-    DEFAULT_OPT,
-    OVERRIDE_OPT
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: bottomLayer,
+          start: motionConfig.start,
+          end: motionConfig.end,
+          scrub: motionConfig.scrub,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      tl.to(topLayer, {
+        startAt: { filter: "brightness(100%) blur(0px)" },
+        filter: motionConfig.filter,
+        ease: motionConfig.ease,
+        scale: motionConfig.scale,
+        duration: 1,
+      });
+
+      tl.to(
+        topLayer,
+        {
+          autoAlpha: 0,
+          duration: 0.2,
+          ease: "none",
+        },
+        ">-0.1",
+      );
+    },
   );
-
-  createLayerStackAnimation(motionConfig);
 }

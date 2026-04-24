@@ -1,122 +1,99 @@
-import { BREAKPOINT, GSAPCONFIG } from "../utils/constant.js";
+import { MEDIARULE } from "../utils/constant.js";
 import { STORE } from "../utils/globalStore.js";
-import { getMotionOptByViewport, warn } from "../utils/helpers.js";
-// Make animation functions
-const DEFAULT_OPT = {
-  scrub: GSAPCONFIG.SCRUB,
-  scale: 0.95,
-};
-const OVERRIDE_OPT = {
-  [BREAKPOINT.MOBILE]: {
-    ...DEFAULT_OPT,
-  },
+import { selectElements } from "../utils/helpers.js";
+
+const MOTION_DEFAULTS = {
+  scrub: 1,
 };
 
-const ROOT_DOM = {
-  section: '[data-wheel="section"]',
-  wheelBox: '[data-wheel="wheel"]',
-  contentBox: '[data-wheel="contentBox"]',
-  svg: "svg",
+const MOTION_MOBILE = {
+  scrub: 0.8,
 };
 
-function getDom() {
-  const section = document.querySelector(ROOT_DOM.section);
-
+export function wheelRotateMomentSectionInit({ mm }) {
+  const moduleName = "[wheelRotateMoment]";
+  const section = document.querySelector('[data-wheel="section"]');
+  const scale = 0.95;
   if (!section) {
-    warn("[wheelRotateMoment]", "Missing ROOT DOM", { section });
-    return null;
+    logError(moduleName, section, '[data-wheel="section"]');
+    return;
   }
 
-  const wheelBox = section.querySelector(ROOT_DOM.wheelBox);
-  const contentBox = section.querySelector(ROOT_DOM.contentBox);
-  const svg = wheelBox.querySelector(ROOT_DOM.svg);
-
-  if (!wheelBox || !contentBox || !svg) {
-    warn("[wheelRotateMoment]", "Missing ROOT DOM", {
-      wheelBox,
-      contentBox,
-      svg,
-    });
-    return null;
-  }
-
-  return {
-    section,
-    wheelBox,
-    contentBox,
-    svg,
+  const selectors = {
+    wheelBox: '[data-wheel="wheel"]',
+    contentBox: '[data-wheel="contentBox"]',
+    svg: "svg",
   };
-}
 
-// Make animation functions
-function createWheelRotateAnimation(dom, motionConfig = {}) {
-  const { section, wheelBox, contentBox, svg } = dom;
-  const { scrub, scale } = motionConfig;
+  const dom = selectElements(section, selectors, moduleName);
+  if (!dom) return;
+  const { wheelBox, contentBox, svg } = dom;
 
-  const getMetrics = () => {
-    const svgWidth = svg.getBoundingClientRect().width * scale;
-    const contentHeight = contentBox.getBoundingClientRect().height;
+  let metrics = {};
 
-    return {
-      svgWidth,
-      contentHeight,
-      startX: -svgWidth * 1.8,
-      endX: svgWidth * 1.8,
-      rotation: (svgWidth * 3.6 * 360) / (svgWidth * Math.PI),
+  const updateMetrics = (isMobile = false) => {
+    const ratio = isMobile ? 2 : 1;
+    const svgRect = svg.getBoundingClientRect();
+    const svgWidth = svgRect.width * scale;
+    const distanceToEdge = STORE.VW / 2 + svgWidth / 2 + 30;
+    const travelDistance = distanceToEdge * ratio;
+    const circumference = svgWidth * Math.PI;
+    const totalRotation = (travelDistance / circumference) * 360;
+
+    STORE.wheelScrollDist = travelDistance;
+
+    metrics = {
+      contentHeight: contentBox.offsetHeight,
+      startX: -distanceToEdge,
+      endX: distanceToEdge,
+      rotation: totalRotation,
+      scrollDistance: travelDistance,
     };
   };
 
-  // ================== TIMELINE ==================
-  gsap.set(wheelBox, { transformOrigin: "50% 50%", scale });
-  gsap.set(contentBox, { y: () => getMetrics().contentHeight * 1.5 });
-  gsap.set(wheelBox, {
-    x: () => getMetrics().startX,
+  updateMetrics();
+  // section.style.backgroundColor = "blue";
+  gsap.set(svg, { transformOrigin: "50% 50%", scale });
+  gsap.set(contentBox, { y: () => metrics.contentHeight * 1.5 });
+  gsap.set(svg, {
+    x: () => metrics.startX,
     rotation: 0,
   });
 
-  const tl = gsap.timeline({
-    defaults: { ease: GSAPCONFIG.EASE },
-    scrollTrigger: {
-      trigger: section,
-      start: "top top",
-      end: "+=200%",
-      scrub: scrub,
-      pin: true,
-      pinSpacing: true,
-      invalidateOnRefresh: true,
+  mm.add(
+    { isDesktop: MEDIARULE.desktop.query, isMobile: MEDIARULE.mobile.query },
+    (context) => {
+      const isMobile = context.conditions.isMobile;
+      const motionConfig = isMobile
+        ? { ...MOTION_DEFAULTS, ...MOTION_MOBILE }
+        : MOTION_DEFAULTS;
+
+      const tl = gsap.timeline({
+        defaults: {
+          ease: "none",
+        },
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: () => `+=${metrics.scrollDistance}px`,
+          scrub: motionConfig.scrub,
+          pin: true,
+          pinSpacing: false,
+          invalidateOnRefresh: true,
+          onRefresh: () => updateMetrics(isMobile),
+        },
+      });
+
+      tl.to(contentBox, { y: () => -metrics.contentHeight * 1.5 }, 0);
+      tl.to(
+        svg,
+        {
+          x: () => metrics.endX,
+          rotation: () => metrics.rotation,
+        },
+        "<",
+      );
+      tl.to(section, { opacity: 0, duration: 0.05 });
     },
-  });
-
-  tl.to(contentBox, { y: () => -getMetrics().contentHeight * 1.5 }, 0);
-  tl.to(
-    wheelBox,
-    {
-      x: () => getMetrics().endX,
-      rotation: () => getMetrics().rotation,
-    },
-    "<",
   );
-  return tl;
-}
-
-export function wheelRotateMomentSectionInit(config = {}) {
-  const { viewportName } = config;
-
-  const dom = getDom();
-  if (!dom) return;
-
-  const motionConfig = getMotionOptByViewport(
-    viewportName,
-    DEFAULT_OPT,
-    OVERRIDE_OPT,
-  );
-
-  const tl = createWheelRotateAnimation(dom, motionConfig);
-
-  return () => {
-    tl.scrollTrigger?.kill();
-    tl.kill();
-
-    gsap.set([dom.wheelBox, dom.contentBox], { clearProps: "all" });
-  };
 }

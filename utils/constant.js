@@ -24,8 +24,8 @@ export const VIEWPORTRULES = [
   },
   {
     name: BREAKPOINT.SMALL_DESKTOP,
-    query: "(min-width: 1024px) and (max-width: 1440px)",
-    condition: (width) => width >= 1024 && width <= 1440,
+    query: "(min-width: 992px) and (max-width: 1440px)",
+    condition: (width) => width >= 992 && width <= 1440,
   },
   {
     name: BREAKPOINT.LARGE_DESKTOP,
@@ -33,3 +33,12 @@ export const VIEWPORTRULES = [
     condition: (width) => width >= 1441,
   },
 ];
+
+export const MEDIARULE = {
+  mobile: {
+    query: "(max-width: 767px)",
+  },
+  desktop: {
+    query: "(min-width: 768px)",
+  },
+};

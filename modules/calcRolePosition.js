@@ -1,3 +1,5 @@
+/** OLD đã hết dùng trong các file chính */
+
 import { BREAKPOINT } from "../utils/constant.js";
 import { getViewportRule, createRafDebouncer } from "../utils/helpers.js";
 import { createResizeObserver } from "../utils/observeHelper.js";
@@ -35,7 +37,7 @@ function getPointInScreenFromMatrix(
   svgMatrix,
   svgX,
   svgY,
-  svgElForLegacyFallback
+  svgElForLegacyFallback,
 ) {
   if (!svgMatrix) return null;
 
@@ -60,7 +62,7 @@ function findTOnPathForX(
   boxRect,
   ropePath,
   ropeSvg,
-  svgMatrix
+  svgMatrix,
 ) {
   let low = 0.02;
   let high = 0.98;
@@ -76,7 +78,7 @@ function findTOnPathForX(
       svgMatrix,
       pointOnPath.x,
       pointOnPath.y,
-      ropeSvg
+      ropeSvg,
     );
     if (!screenPoint) break;
 
@@ -102,7 +104,7 @@ function findTOnPathForX(
 
 function measureItemWidths(items) {
   return items.map(
-    (el) => el.offsetWidth || el.getBoundingClientRect().width || 0
+    (el) => el.offsetWidth || el.getBoundingClientRect().width || 0,
   );
 }
 
@@ -137,7 +139,7 @@ function computeScaleAndGap({
 
   const totalWidthAtBase = itemWidths.reduce(
     (total_width, item_width) => total_width + item_width * baseScale,
-    0
+    0,
   );
   let finalScale = baseScale;
   const minTotalAtBase = totalWidthAtBase + innerGapCount * minInnerGap;
@@ -150,7 +152,7 @@ function computeScaleAndGap({
 
   const scaledTotalWidth = itemWidths.reduce(
     (total_width, item_width) => total_width + item_width * finalScale,
-    0
+    0,
   );
 
   let innerGap = (boxWidth - 2 * outerGap - scaledTotalWidth) / innerGapCount;
@@ -274,8 +276,8 @@ function setupRopeInstance({
         boxRect,
         ropePath,
         ropeSvg,
-        svgMatrix
-      )
+        svgMatrix,
+      ),
     );
 
     // Position each item so its pin sits on the rope.
@@ -289,7 +291,7 @@ function setupRopeInstance({
         svgMatrix,
         pointOnPath.x,
         pointOnPath.y,
-        ropeSvg
+        ropeSvg,
       );
       if (!screenPoint) continue;
 
