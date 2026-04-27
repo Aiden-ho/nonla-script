@@ -45,6 +45,10 @@ function getDom() {
 }
 
 export function loadingScreenInit() {
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+
   const dom = getDom();
   if (dom === null) return;
 
@@ -58,12 +62,22 @@ export function loadingScreenInit() {
   } = dom;
 
   const lenis = getLenis();
-  lenis.stop();
+  if (lenis) {
+    lenis.stop(); // Khóa scroll
+    lenis.scrollTo(0, { immediate: true });
+  } else {
+    window.scrollTo(0, 0);
+  }
+
+  if (typeof ScrollTrigger !== "undefined") {
+    ScrollTrigger.clearScrollMemory("manual");
+  }
+
   const tl = gsap.timeline({
     defaults: { ease: "power2.out" },
-    onComplete: () => {
-      lenis.start();
-    },
+    // onComplete: () => {
+    //   if (lenis) lenis.start();
+    // },
   });
 
   tl.to(messWrapper, {
@@ -110,7 +124,26 @@ export function loadingScreenInit() {
         });
       },
     },
-    ">"
+    ">",
   );
-  tl.to(section, { autoAlpha: 0, duration: 1.5 });
+  tl.to(section, {
+    autoAlpha: 0,
+    duration: 1.5,
+    onStart: () => {
+      // 1. Trả lại quyền scroll ngay khi màn hình loading BẮT ĐẦU mờ đi
+      if (lenis) lenis.start();
+
+      // 2. Refresh lại ScrollTrigger (rất quan trọng)
+      // Vì lúc này layout thật mới chính thức lộ diện,
+      // cần tính lại tọa độ cho mấy cái Pin/Sticky ở dưới.
+      if (typeof ScrollTrigger !== "undefined") {
+        ScrollTrigger.refresh();
+      }
+    },
+    onComplete: () => {
+      // Dọn dẹp DOM cho nhẹ máy (autoAlpha đã lo visibility hidden,
+      // nhưng set display none sẽ gỡ element ra khỏi render tree)
+      section.style.display = "none";
+    },
+  });
 }
