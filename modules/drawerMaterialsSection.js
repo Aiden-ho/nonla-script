@@ -28,8 +28,11 @@ export function drawerMaterialsInit({ mm }) {
   mm.add(
     { isDesktop: MEDIARULE.desktop.query, isMobile: MEDIARULE.mobile.query },
     (context) => {
-      function createItemAnimation(item) {
-        if (item.__tl) return;
+      function createItemAnimation(item, onReady) {
+        if (item.__tl) {
+          if (onReady) onReady();
+          return;
+        }
 
         const dom = selectElements(
           item,
@@ -47,11 +50,14 @@ export function drawerMaterialsInit({ mm }) {
               mask: "lines",
             });
 
-            tl.from(
+            gsap.set(descSpilt.lines, { yPercent: 115 });
+            gsap.set(img, { autoAlpha: 0 });
+
+            tl.to(
               descSpilt.lines,
               {
-                yPercent: 115,
-                duration: 1,
+                yPercent: 0,
+                duration: 0.6,
                 ease: GSAPCONFIG.SLIT_TEXT_EASE,
                 stagger: 0.04,
               },
@@ -59,45 +65,47 @@ export function drawerMaterialsInit({ mm }) {
             ).to(
               img,
               {
-                opacity: 1,
-                duration: 0.04,
+                autoAlpha: 1,
+                duration: 0.02,
               },
-              ">",
+              "-=0.4",
             );
 
             item.__tl = tl;
             item.__split = descSpilt;
+
+            if (onReady) onReady(); // Gọi chạy sau khi setup xong
           });
         };
 
-        //check font load
-        document.fonts.status === "loaded"
-          ? init()
-          : document.fonts.ready.then(init);
+        if (document.fonts.status === "loaded") {
+          init();
+        } else {
+          document.fonts.ready.then(init);
+        }
       }
 
       function onClickList(e) {
         const item = e.target.closest(itemSelector);
         if (!item || activeItem === item) return;
 
-        // Hanlde previous active Item
+        // Xử lý item cũ
         if (activeItem) {
           activeItem.classList.remove("is-actived");
           activeItem.__tl?.reverse();
         }
 
-        createItemAnimation(item);
-
-        // Hanlde new active Item
-        item.classList.add("is-actived");
-        item.__tl?.play();
-        activeItem = item;
+        // Tạo (hoặc gọi lại) animation cho item mới và Play qua callback
+        createItemAnimation(item, () => {
+          item.classList.add("is-actived");
+          item.__tl.play();
+          activeItem = item;
+        });
       }
 
       list.addEventListener("click", onClickList);
       overlay.addEventListener("click", resetDrawer);
 
-      //clearup
       return () => {
         list.removeEventListener("click", onClickList);
         overlay.removeEventListener("click", resetDrawer);
