@@ -35,11 +35,23 @@ export function VariantSectionInit({ mm }) {
     (context) => {
       const isMobile = context.conditions.isMobile;
       const motionConfig = isMobile ? MOTION_MOBILE : MOTION_DEFAULTS;
+      gsap.set(imgs, {
+        willChange: "transform, opacity",
+        autoAlpha: 0,
+        force3D: true,
+      });
 
       if (isMobile) {
-        gsap.set(section, { height: "300vh" });
+        const totalImgs = imgs.length;
+        const vhPerImg = 35;
+        const totalDuration = totalImgs;
+        const individualDuration = 1;
+        const step = (totalDuration - individualDuration) / (totalImgs - 1);
+
+        gsap.set(section, { height: `${totalImgs * vhPerImg}vh` });
 
         const tl = gsap.timeline({
+          defaults: { ease: "none" },
           scrollTrigger: {
             trigger: section,
             start: "top top",
@@ -52,23 +64,18 @@ export function VariantSectionInit({ mm }) {
         imgs.forEach((img, i) => {
           tl.fromTo(
             img,
-            { yPercent: 150, autoAlpha: 0 },
+            { yPercent: 150 },
             {
               yPercent: 0,
               rotation: i * (i % 2 === 0 ? 1 : -1),
               autoAlpha: 1,
               scale: 1,
-              duration: 3,
+              duration: individualDuration,
             },
+            i * step,
           );
         });
       } else {
-        gsap.set(imgs, {
-          willChange: "transform, opacity",
-          autoAlpha: 0,
-          force3D: true,
-        });
-
         gsap.set(wrapper, {
           perspective: 1000,
           transformStyle: "preserve-3d",
@@ -91,12 +98,14 @@ export function VariantSectionInit({ mm }) {
           rotY: i % 2 === 0 ? 10 : -10,
         }));
 
+        const scrollDistance = imgs.length * (STORE.VH * 0.3);
+
         const tl = gsap.timeline({
           defaults: { ease: "power3.out" },
           scrollTrigger: {
             trigger: wrapper,
             start: "top top",
-            end: () => `+=${imgs.length * 400}px`,
+            end: () => `+=${scrollDistance}px`,
             scrub: motionConfig.scrub,
             pin: true,
             invalidateOnRefresh: true,
@@ -104,7 +113,7 @@ export function VariantSectionInit({ mm }) {
         });
 
         imgs.forEach((img, index) => {
-          const atTime = index * 0.5;
+          const atTime = index * 1;
           const data = preComputedData[index];
 
           tl.to(img, { autoAlpha: 1, immediateRender: false }, atTime);
@@ -119,7 +128,7 @@ export function VariantSectionInit({ mm }) {
               scale: 1,
               force3D: true,
               ease: "cubic-bezier(0.33, 1, 0.68, 1)",
-              duration: 2,
+              duration: 2.5,
             },
             atTime,
           );
@@ -129,9 +138,8 @@ export function VariantSectionInit({ mm }) {
               imgs[index - 1],
               {
                 autoAlpha: 0,
-                display: "none", // Xóa khỏi GPU hoàn toàn
+                display: "none",
                 duration: 0.5,
-                overwrite: "auto",
               },
               atTime + 0.5,
             );
