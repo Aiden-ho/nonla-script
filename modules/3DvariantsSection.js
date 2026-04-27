@@ -43,7 +43,7 @@ export function VariantSectionInit({ mm }) {
 
       if (isMobile) {
         const totalImgs = imgs.length;
-        const vhPerImg = 35;
+        const vhPerImg = 25;
         const totalDuration = totalImgs;
         const individualDuration = 1;
         const step = (totalDuration - individualDuration) / (totalImgs - 1);
