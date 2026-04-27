@@ -164,7 +164,7 @@ export function revealMapInit({ mm }) {
             trigger: section,
             start: "top 20%",
             end: "bottom bottom",
-            scrub: isMobile ? false : true,
+            toggleActions: "play none none none",
             invalidateOnRefresh: true,
           },
           onComplete: () => {

@@ -85,7 +85,7 @@ function createFooterAnimation(dom = {}) {
         trigger: section,
         start: "top 80%",
         end: "bottom bottom",
-        scrub: true,
+        toggleActions: "play none none none",
         invalidateOnRefresh: true,
       },
     });
