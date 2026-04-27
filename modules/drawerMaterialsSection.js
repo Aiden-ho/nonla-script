@@ -28,6 +28,8 @@ export function drawerMaterialsInit({ mm }) {
   mm.add(
     { isDesktop: MEDIARULE.desktop.query, isMobile: MEDIARULE.mobile.query },
     (context) => {
+      const { isMobile } = context.conditions;
+
       function createItemAnimation(item, onReady) {
         if (item.__tl) {
           if (onReady) onReady();
@@ -66,9 +68,9 @@ export function drawerMaterialsInit({ mm }) {
               img,
               {
                 autoAlpha: 1,
-                duration: 0.02,
+                duration: 0.04,
               },
-              "-=0.4",
+              ">",
             );
 
             item.__tl = tl;
@@ -101,6 +103,17 @@ export function drawerMaterialsInit({ mm }) {
           item.__tl.play();
           activeItem = item;
         });
+      }
+
+      if (isMobile && !activeItem) {
+        const firstItem = list.querySelector(itemSelector);
+        if (firstItem) {
+          createItemAnimation(firstItem, () => {
+            firstItem.classList.add("is-actived");
+            firstItem.__tl.play();
+            activeItem = firstItem;
+          });
+        }
       }
 
       list.addEventListener("click", onClickList);
