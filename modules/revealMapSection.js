@@ -154,6 +154,9 @@ export function revealMapInit({ mm }) {
           mask: "lines",
         });
 
+        gsap.set(headingSplit.lines, { yPercent: 100, autoAlpha: 0 });
+        gsap.set(textSplit.lines, { yPercent: 100, autoAlpha: 0 });
+
         // 2. Setup Timeline
         const tl = gsap.timeline({
           defaults: { ease: GSAPCONFIG.EASE },
@@ -169,15 +172,27 @@ export function revealMapInit({ mm }) {
           },
         });
 
-        tl.from(
+        tl.to(
           headingSplit.lines,
-          { yPercent: 115, ease: GSAPCONFIG.SLIT_TEXT_EASE, stagger: 0.04 },
+          {
+            yPercent: 0,
+            autoAlpha: 1,
+            stagger: 0.05,
+            duration: 0.6,
+            ease: GSAPCONFIG.SLIT_TEXT_EASE,
+          },
           0,
         )
-          .from(
+          .to(
             textSplit.lines,
-            { yPercent: 115, ease: GSAPCONFIG.SLIT_TEXT_EASE, stagger: 0.04 },
-            ">",
+            {
+              yPercent: 0,
+              autoAlpha: 1,
+              stagger: 0.05,
+              duration: 0.6,
+              ease: GSAPCONFIG.SLIT_TEXT_EASE,
+            },
+            "-=0.4",
           )
           .to(map, { autoAlpha: 1, duration: 0.5 }, "<+=0.2")
           .to(action, { autoAlpha: 1, duration: 0.5 }, "<");
