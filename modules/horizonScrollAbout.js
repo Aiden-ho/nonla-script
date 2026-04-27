@@ -126,7 +126,7 @@ export function horizonScrollAboutInit({ mm }) {
 
         const stConfig = {
           trigger: isFirstFrame ? wrapper : frame,
-          start: isFirstFrame ? "top 20%" : "left 62%",
+          start: isFirstFrame ? "top 70%" : "left 62%",
           toggleActions: "play none none reverse",
           invalidateOnRefresh: true,
           // markers: isFirstFrame ? false : true,
